@@ -1,5 +1,6 @@
 import httpx
 import feedparser
+import sys
 import time
 import sqlite3
 import re
@@ -190,11 +191,11 @@ def scoring(keywords, data):
     Returns:
         Five highest scored arcticle.
     """
-    temp = set(keywords.split(","))
     words = set()
-    for word in temp:
+    for word in keywords.split(","):
         cleaned = word.strip().lower()
-        words.add(cleaned)
+        if cleaned:
+            words.add(cleaned)
 
     matches = []
 
@@ -230,7 +231,7 @@ def format_output(result):
         source = entry[0]["source"]
         score = entry[1] or "0"
         reason = entry[2]
-        description = entry[0]["description"]
+        description = entry[0].get("description") or "Description unavailable"
         link = entry[0]["link"]
 
         stored_date = entry[0].get("date")
@@ -245,8 +246,7 @@ def format_output(result):
     return res
 
 
-def main():
-    """
+def collect():
     check_db()
     input_link = "https://rss.arxiv.org/rss/cs.ai"
     fetched_feed = fetch_rss_feed(input_link)
@@ -260,11 +260,30 @@ def main():
     save_to_db(entries)
     for i in range(min(5, len(entries))):
         print(entries[i])
-    """
+
+
+def search():
+    print("Please input keywords divided by commas (,)")
     keywords = input()
     data = read_from_db()
     result = scoring(keywords, data)
     print(format_output(result))
+
+
+def main():
+    if len(sys.argv) < 2:
+        print(
+            "Error: Please specify a mode. Usage: python3 script.py [collect|search]."
+        )
+        sys.exit(1)
+    mode = sys.argv[1].lower()
+
+    if mode == "collect":
+        collect()
+    elif mode == "search":
+        search()
+    else:
+        print(f"Error: Unknown mode {mode}. Choose 'collect' or 'search'")
 
 
 if __name__ == "__main__":
