@@ -4,7 +4,8 @@ import sys
 import time
 import sqlite3
 import re
-from datetime import datetime
+from pathlib import Path
+from datetime import datetime, timedelta, timezone
 
 
 # Function to fetch the RSS feed from a given link
@@ -160,6 +161,21 @@ def read_from_db(db_name="data/storage.db"):
     return [dict(row) for row in rows]
 
 
+def delete_old_entries(db_name="data/storage.db"):
+    cutoff = datetime.now(timezone.utc).replace(microsecond=0) - timedelta(days=7)
+    cutoff_text = cutoff.strftime("%Y-%m-%dT%H:%M:%SZ")
+    conn = sqlite3.connect(db_name)
+
+    try:
+        cur = conn.cursor()
+        cur.execute("DELETE FROM entries WHERE first_seen_at < ?", (cutoff_text,))
+        deleted = cur.rowcount
+        conn.commit()
+        return deleted
+    finally:
+        conn.close()
+
+
 def sort_score(matches):
     """
     Sorts matches.
@@ -222,12 +238,12 @@ def scoring(keywords, data):
     return sorted_matches[:5]
 
 
-def format_output(result):
+def format_output_txt(result):
     res = ""
     if not result:
         return "No matching articles found."
     for number, entry in enumerate(result, start=1):
-        arcticle = entry[0]["title"]
+        article = entry[0]["title"]
         source = entry[0]["source"]
         score = entry[1] or "0"
         reason = entry[2]
@@ -241,9 +257,50 @@ def format_output(result):
         else:
             display_date = "Publication date unavailable"
 
-        line = f"Article: {arcticle}\nScore: {score} | Source: {source}\nPublished: {display_date}\nLink: {link}\n\nDescription: {description}\nReason: {reason}"
+        line = f"Article: {article}\nScore: {score} | Source: {source}\nPublished: {display_date}\nLink: {link}\n\nDescription: {description}\nReason: {reason}"
         res += f"{number}.\n{line}\n\n"
     return res
+
+
+def format_output_md(keywords, result):
+    res = ""
+    res += "# Research Digest\n\n"
+    res += f"Keywords: {keywords}\n"
+    res += f"Generated: {datetime.now().strftime('%d %b %Y, %H:%M')}\n\n"
+    res += f"## Matching Arcticle: \n"
+    if not result:
+        res += "No matching articles found."
+        return res
+
+    for number, entry in enumerate(result, start=1):
+        article = entry[0]["title"]
+        source = entry[0]["source"]
+        score = entry[1] or "0"
+        reason = entry[2]
+        description = entry[0].get("description") or "Description unavailable"
+        link = entry[0]["link"]
+
+        stored_date = entry[0].get("date")
+        if stored_date:
+            parsed_date = datetime.strptime(stored_date, "%Y-%m-%dT%H:%M:%SZ")
+            display_date = parsed_date.strftime("%d %b %Y")
+        else:
+            display_date = "Publication date unavailable"
+        res += f"#### {number}. {article}\n\n"
+        res += f"**Score** : {score}\n"
+        res += f"**Source** : {source}\n"
+        res += f"**Published** : {display_date}\n\n"
+        res += f"[Read the arcticle]({link})\n\n"
+        res += f"**Description** : {description}\n\n"
+        res += f"**Matches** : {reason}\n\n"
+    return res
+
+
+def create_markdown(res):
+    p = Path("output/result.md")
+    p.parent.mkdir(parents=True, exist_ok=True)
+    p.write_text(res, encoding="utf-8")
+    return p
 
 
 def collect():
@@ -258,8 +315,8 @@ def collect():
             continue
         entries.append(normalized_entry)
     save_to_db(entries)
-    for i in range(min(5, len(entries))):
-        print(entries[i])
+    delete_old_entries()
+    print("Collect process is successful")
 
 
 def search():
@@ -267,7 +324,10 @@ def search():
     keywords = input()
     data = read_from_db()
     result = scoring(keywords, data)
-    print(format_output(result))
+    md_res = format_output_md(keywords, result)
+    saved_path = create_markdown(md_res)
+    print(f"Digest saved to: {saved_path}")
+    print(format_output_txt(result))
 
 
 def main():
