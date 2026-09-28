@@ -219,18 +219,28 @@ def scoring(keywords, data):
         title = (arcticle.get("title") or "").lower().strip()
         description = (arcticle.get("description") or "").lower().strip()
         score = 0
-        reasons = []
+        title_matches = []
+        description_matches = []
 
         for word in words:
             pattern = r"\b" + re.escape(word) + r"\b"
             if re.search(pattern, title):
                 score += 5
-                reasons.append(f"'{word}' in title")
+                title_matches.append(word)
 
             if re.search(pattern, description):
                 score += 2
-                reasons.append(f"'{word}' in description")
+                description_matches.append(word)
+
         if score > 0:
+            reasons = []
+
+            if description_matches:
+                reasons.append(f"{', '.join(description_matches)} in description")
+
+            if title_matches:
+                reasons.append(f"{', '.join(title_matches)} in title")
+
             formatted_reasons = "; ".join(reasons)
             matches.append([arcticle, score, formatted_reasons])
 
