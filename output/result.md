@@ -1,73 +1,73 @@
 # Research Digest
 
-Keywords: AI, Security, Database, Concerns
-Generated: 28 Sep 2026, 13:39
+Keywords: AI, Security
+Generated: 13 Oct 2026, 16:32
 
 ## Matching Arcticle: 
-#### 1. Evolutionary Safety of Recursive Self-Improving AI: Taxonomy, Risk Discovery, and Evaluation
+#### 1. Trust, but Validate the Instrument: Auditing AI-Generated RTL Verification Plans on Authored Security-Regression Proxies
+
+**Score** : 14
+**Source** : arxiv
+**Published** : 12 Oct 2026
+
+[Read the arcticle](https://arxiv.org/abs/2609.19844)
+
+**Description** : arXiv:2609.19844v2 Announce Type: replace-cross 
+Abstract: AI-generated RTL verification plans can satisfy a provider schema yet fail at the boundary to trusted execution. We present SecTB-RTL, an auditable framework covering 31 tasks and 124 authored hardware-security regressions. A deterministic non-AI baseline killed 36, 75, and 78 mutants at increasing resource limits. The first confirmatory run (C1-R2) failed before model execution because the provider rejected its response schema. After a schema-only repair made without viewing outcomes, a separately frozen follow-up run (C1-R3) completed 1,860 calls. The provider accepted 1,857 responses, but only nine passed the production semantic validator. The generation and execution rules did not match. We therefore preserve the run as an instrument-validation incident and report no prompt-effect estimate. This incident shows that provider or schema acceptance does not establish execution validity. Compilation and coverage are only diagnostics; the exact saved artifact must pass the full production path. A subsequent follow-up is excluded because it did not satisfy the preregistered evidence-completeness gate and is treated only as future work. We release the benchmark, failure-preserving contract, incident provenance, and governance controls needed to prevent infrastructure behavior from being misreported as model behavior.
+
+**Matches** : security, ai in description; security, ai in title
+
+#### 2. ArapaiSecure: An Autonomous AI Security Agent for Banking: Multi-Vector Fraud and AML Detection Across Retail and Corporate Accounts
+
+**Score** : 14
+**Source** : arxiv
+**Published** : 08 Oct 2026
+
+[Read the arcticle](https://arxiv.org/abs/2606.17555)
+
+**Description** : arXiv:2606.17555v3 Announce Type: replace-cross 
+Abstract: Banks face two threat families with fundamentally different detection requirements: signature-based fraud (card- not-present attacks, account takeover, ATM cloning) and behavioural financial crime (structuring, layering, mule networks, business email compromise). Static rule engines catch high-velocity events but remain blind to BEC payment redirection, session hijacking, and laundering layering, which are engineered to resemble legitimate activity at the individual level. This paper presents ArapaiSecure, an autonomous AI security agent for retail and corporate banking using a three-component fusion architecture across two parallel event streams: transactions (card fraud, ACH/wire fraud, AML) and sessions (account takeover, hijacking, SIM-swap, insider abuse). Each stream combines an LSTM sequence model of per-account behaviour, a statistical ve- locity/threshold monitor, and a graph module capturing account-counterparty patterns (fan-in, fan-out, pass-through ratio) for laundering detection. Experiments on a synthetic log of 237,669 transactions and 113,508 sessions across 13 threat categories and 3,470 accounts show that ArapaiSecure achieves an overall F1 of 0.787 (transaction) and 0.867 (session), versus 0.562/0.733 for a rule-based baseline and 0.655/0.713 for an LSTM-only baseline. ArapaiSecure also incorporates a customer-facing verification chatbot (96.6% identity accuracy, 86.8% mass-reset detection) and an analyst case-summary assistant (99.3% action recommendation F1), with Critical-tier response latency under 0.43 ms at the 95th percentile.
+
+**Matches** : security, ai in description; security, ai in title
+
+#### 3. Defensive Sufficiency in a Stackelberg Model of AI Security
+
+**Score** : 12
+**Source** : arxiv
+**Published** : 08 Oct 2026
+
+[Read the arcticle](https://arxiv.org/abs/2610.09892)
+
+**Description** : arXiv:2610.09892v1 Announce Type: cross 
+Abstract: Feedback from automated testing, human red teaming, and incident response can strengthen an AI system's defenses when discovered failures lead to effective repairs. We study when this feedback process provides sufficient protection and when investing in it is economically worthwhile. We begin by showing that an attack surface composed of finite number of inputs is defended with probability 1 if every unresolved attack has a persistent chance of discovery, repairs are effective, and subsequent updates preserve earlier protection. We derive completion-time bounds and extend the analysis to growing attack surfaces, repairs that generalize across related attacks, and multiple discovery mechanisms. These results distinguish eventual protection against each fixed attack from complete protection at a single time. We then formulate a defender-led Stackelberg game in which the defender invests in proactive discovery and reactive repair, anticipating the attacker's choice of search effort. We characterize the least-cost allocation that deters attack and the equilibrium regimes in which the defender funds neither capability, one capability, or both. Numerical experiments illustrate these regimes and show how faster repair can reduce compromise duration without reducing compromise probability.unified theory of performance limits in generative language models.
+
+**Matches** : ai in description; security, ai in title
+
+#### 4. A Local Agentic AI Framework to Generate Edge Case Scenarios for Safety Assurance
 
 **Score** : 9
 **Source** : arxiv
-**Published** : 28 Sep 2026
+**Published** : 12 Oct 2026
 
-[Read the arcticle](https://arxiv.org/abs/2609.31186)
+[Read the arcticle](https://arxiv.org/abs/2610.13479)
 
-**Description** : arXiv:2609.31186v1 Announce Type: new 
-Abstract: Artificial intelligence is advancing rapidly, with increasingly capable systems taking larger roles in reasoning, decision-making, scientific discovery, and autonomous development. As AI begins to participate in its own improvement, from model training and experience accumulation to agent evolution and automated AI development, the prospect of recursive self-improvement (RSI) is becoming increasingly relevant. This transition raises a fundamental safety question: how can safety be maintained when the system, its accumulated experience, and even the process producing its successors continue to change?
-  We introduce Evolutionary Safety as a perspective for studying safety under persistent and recursive self-improvement. It concerns not only whether an AI system is safe at a particular moment, but how safety properties change, persist, accumulate, and propagate throughout evolution. We characterize recurring manifestations, including intent drift, error accumulation, experience contamination, safety-property erosion, evaluator drift, and risk propagation. We then develop a taxonomy spanning persistent agent state, model state, evaluation and environmental feedback, computational substrate, and meta-level update mechanisms. Building on this taxonomy, we examine how evolutionary risks can be discovered and evaluated across states, updates, trajectories, and lineages, and derive governance principles for modification, selection, authorization, provenance, and recovery. Finally, we outline open problems toward maintaining safety guarantees as AI systems become increasingly persistent, adaptive, and recursively self-improving. Project resources and proposed evaluation systems are available at https://chaunceykung.github.io/evolutionary-safety-rsi.
-
-**Matches** : ai, concerns in description; ai in title
-
-#### 2. A Framework for Identifying, Categorizing, and Explaining Bias in AI-Generated Code
-
-**Score** : 9
-**Source** : arxiv
-**Published** : 28 Sep 2026
-
-[Read the arcticle](https://arxiv.org/abs/2609.30642)
-
-**Description** : arXiv:2609.30642v1 Announce Type: cross 
-Abstract: As Large Language Models (LLMs) become integrated into software development workflows, concerns regarding unintentional biases in AI-generated code. Although evidence suggests these biases exist, limited research has systematically identified, categorized, and explained them. This study investigates bias in AI-generated code and evaluates whether LLMs can reliably identify and explain it through a taxonomy-driven framework. We extended an existing dataset of biased AI-generated Python code and manually annotated snippets with bias categories and human-authored justifications to establish a ground-truth dataset. Using this dataset, we evaluated proprietary and open-source LLMs as automated bias detection and justification systems through ICL. Finally, we analyzed similarity between LLM-generated explanations and human-authored justifications using structured justification and code identification metrics.
-  Our findings demonstrate that LLMs can effectively support code bias identification and explanation. Gemini achieved 80.14% classification accuracy, with 84.0% precision and 95.7% recall, while the best open-source alternative, Qwen3-coder, achieved 82.45% accuracy, 68.64% precision, and 80.22% recall. Additionally, the models achieved justification similarity scores of 80.4% and 80.14%, respectively, relative to human-authored reasoning, and code identification similarity scores of 86.0% and 87.82%. These results suggest that LLMs can detect biased logic in generated Python code and produce explanations that substantially align with expert interpretations.
-
-**Matches** : ai, concerns in description; ai in title
-
-#### 3. Resource-Optimized and Energy-Aware Agentic AI Framework Anchored on Blockchain for Secure Software Supply Chains
-
-**Score** : 9
-**Source** : arxiv
-**Published** : 28 Sep 2026
-
-[Read the arcticle](https://arxiv.org/abs/2609.31282)
-
-**Description** : arXiv:2609.31282v1 Announce Type: cross 
-Abstract: This paper proposes a blockchain-backed agentic security framework designed to safeguard the complete software development lifecycle (SDLC) while also securing the agentic AI components responsible for monitoring it. The framework coordinates a set of specialised security agents, covering source integrity, dependency and SBOM analysis, CI configura tion auditing, artifact verification, and runtime policy evaluation, each supported by a large language model (LLM) that interprets artefacts, reasons over tool outputs, and produces structured security reports. To ensure agent trustworthiness, every agent generates a cryptographically signed attestation that is recorded in a permissioned blockchain via smart contracts, including an agent registry, an immutable attestation log, and an enforceable release-policy module. Communication among agents and with blockchain nodes is secured using a consortium-operated certificate authority, ensuring authenticated and tamper-resistant interactions. A detailed use-case and sequence flow demonstrate how a source code security agent performs analysis, anchors its attestation on-chain, and triggers a verifiable allow/block deployment decision. The proposed framework of fers decentralised integrity transparent provenance, uninterrupted security assurance and a generalisable architecture to incorporate the agentic AI into the modern software supply chain security.
+**Description** : arXiv:2610.13479v1 Announce Type: new 
+Abstract: Generating edge case scenarios is crucial for training, testing and safety assuring autonomous systems. This identifies hazardous failures to increase system reliability and robustness, ensures the system can still function safely on the boundaries of its operational design domain and learns the expected system behaviour for these edge cases. The rapid advancement in the generation and analysis capabilities of language models (LMs) has expanded their applicability and recent work has investigated LM scenario generation. However, many recent approaches rely on human-in-the-loop or rule-based strategies. This restricts the LM's ability to generate diverse and edge case scenarios; the long tail of the distribution. Our work uses local LMs in a laptop-based agentic AI framework for adaptive scenario generation. This is cheap, fully-controlled, ensures data privacy and security. It uses think, act, observe, update, and continue loops with lightweight JSON encoding to generate scenarios. We use the system requirements, system description and environment description as knowledge bases in contextual prompts for an LM to ensure scenario realism. A second, independent LM critiques each scenario using domain specific criteria so it can be refined. The refined scenarios are run in simulation and evaluation metrics collected. These metric scores are analysed and similar scenarios are created for edge cases (exploitation) or novel scenarios are generated to explore the scenario space. Post-hoc clustering using metric scores and thematic-type analysis of the rich-text scenario descriptions produced by the LM pinpoints functional gaps and their triggering conditions. This creates traceable evidence for the safety assurance case. Our work highlights the potential of a flexible and adaptive local agentic AI framework for automating edge case generation and producing traceable safety assurance evidence.
 
 **Matches** : security, ai in description; ai in title
 
-#### 4. AgentXploit: Autonomous Repository-to-Runtime Red-Teaming for AI Agents
+#### 5. AI-Mediation in Retail Markets: Revenue Effects and Assortment Optimization
 
-**Score** : 9
+**Score** : 7
 **Source** : arxiv
-**Published** : 28 Sep 2026
+**Published** : 12 Oct 2026
 
-[Read the arcticle](https://arxiv.org/abs/2609.31318)
+[Read the arcticle](https://arxiv.org/abs/2610.12917)
 
-**Description** : arXiv:2609.31318v1 Announce Type: cross 
-Abstract: AI agents combine language models with external data and tools that can modify files, call APIs, or execute code. Security failures can arise when adversarial content changes an agent's tool use or when the surrounding software contains vulnerabilities such as path traversal or command injection. We study authorized white-box pre-deployment auditing, where the auditor has access to the target repository and a controlled runtime, but successful attacks must still act through the task-defined attacker interface and be confirmed by an external verifier. We present AgentXploit, a two-role auditing system that separates repository-level attack-path discovery from runtime exploitation. The Analyzer Agent traces attacker-controlled inputs to sensitive operations and records code-supported candidate attack paths; the Exploiter Agent turns these paths into concrete attacks and revises them using runtime feedback. We also introduce AgentXploit-Bench, containing 72 reproducible vulnerabilities across 12 open-source AI-agent systems and frameworks. Across three runs, AgentXploit reaches 59.3% end-to-end success, compared with 38.4% for Codex. Under a token-budget-matched comparison, Codex reaches 46.3%. On AgentDojo, where injection points are provided, the Exploiter Agent reaches 79.2% attack success versus 52.7% for AgentVigil. These results highlight repository discovery and runtime exploitation as distinct challenges in end-to-end agent security auditing.
+**Description** : arXiv:2610.12917v1 Announce Type: new 
+Abstract: AI shopping assistants increasingly influence which products consumers consider. We study retail assortment planning under AI mediation, where a retailer chooses a catalog, an AI intermediary forms a customer-facing shortlist, and the customer chooses from that shortlist according to a multinomial logit model. We consider both deterministic mediation, in which the AI follows a fixed segment-specific ranking, and stochastic mediation based on the Plackett-Luce model.
+  Empirically, we construct a dataset of product rankings from leading AI models, estimate Plackett-Luce ranking models, and evaluate their predictive performance on held-out assortments. Combining these estimates with synthetic customer preferences, we find that accounting for AI mediation can materially change optimal assortments and revenue. Across the tested capacity configurations, ignoring mediation yields mean revenue losses between 2.52% and 11.37% relative to the PL optimum. A much simpler deterministic plug-in, based only on the ordering of fitted AI utilities, performs substantially better, with mean losses of at most 0.53%.
+  Motivated by this performance, we study assortment optimization under deterministic mediation. We characterize its computational complexity and show that, for any fixed number of customer segments, the problem admits a fully polynomial-time approximation scheme.
 
-**Matches** : security, ai in description; ai in title
-
-#### 5. An AI Agent Execution Environment to Safeguard User Data
-
-**Score** : 9
-**Source** : arxiv
-**Published** : 28 Sep 2026
-
-[Read the arcticle](https://arxiv.org/abs/2604.19657)
-
-**Description** : arXiv:2604.19657v3 Announce Type: replace-cross 
-Abstract: AI agents promise to serve as general-purpose personal assistants for their users, which requires them to have access to private user data (e.g., personal and financial information). This poses a serious risk to security and privacy: an AI model may hallucinate or make mistakes, and adversaries may attack it (e.g., via prompt injection) to exfiltrate user data. This paper presents GAAP (Guaranteed Accounting for Agent Privacy), an execution environment for AI agents that guarantees confidentiality for private user data. Crucially, GAAP provides this guarantee deterministically, without trusting the agent with private user data, and without requiring any AI model or the user prompt to be free of attacks. Through dynamic and directed user prompts, GAAP collects permission specifications from users describing how their private data may be shared. GAAP then enforces that the agent's data disclosures comply with these specifications by tracking how the AI agent accesses and uses private user data. GAAP augments Information Flow Control with novel persistent data stores and annotations that enable tracking the private information flow both across steps of a single task and over multiple separate tasks. Our evaluation confirms that GAAP blocks all data disclosure attacks, including those that make other state-of-the-art systems disclose private user data to untrusted parties, with only a small impact on agent utility.
-
-**Matches** : security, ai in description; ai in title
+**Matches** : ai in description; ai in title
 

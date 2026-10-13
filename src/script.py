@@ -7,6 +7,9 @@ import re
 from pathlib import Path
 from datetime import datetime, timedelta, timezone
 
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+DB_PATH = PROJECT_ROOT / "data" / "storage.db"
+
 
 # Function to fetch the RSS feed from a given link
 def fetch_rss_feed(link: str):
@@ -90,10 +93,11 @@ def normalize_output(entry, source):
     return normalized_entry
 
 
-def check_db(db_name="data/storage.db"):
+def check_db(db_name=DB_PATH):
     """
     Check if the database and table exist, and create them if they don't.
     """
+    Path(db_name).parent.mkdir(parents=True, exist_ok=True)
     conn = sqlite3.connect(db_name)
     cur = conn.cursor()
     cur.execute("""
@@ -111,7 +115,7 @@ def check_db(db_name="data/storage.db"):
     conn.close()
 
 
-def save_to_db(entries, db_name="data/storage.db"):
+def save_to_db(entries, db_name=DB_PATH):
     """
     Save a list of entries to the database.
 
@@ -141,7 +145,7 @@ def save_to_db(entries, db_name="data/storage.db"):
     conn.close()
 
 
-def read_from_db(db_name="data/storage.db"):
+def read_from_db(db_name=DB_PATH):
     """
     Read all entries from the database.
 
@@ -161,7 +165,7 @@ def read_from_db(db_name="data/storage.db"):
     return [dict(row) for row in rows]
 
 
-def delete_old_entries(db_name="data/storage.db"):
+def delete_old_entries(db_name=DB_PATH):
     cutoff = datetime.now(timezone.utc).replace(microsecond=0) - timedelta(days=7)
     cutoff_text = cutoff.strftime("%Y-%m-%dT%H:%M:%SZ")
     conn = sqlite3.connect(db_name)
@@ -307,7 +311,7 @@ def format_output_md(keywords, result):
 
 
 def create_markdown(res):
-    p = Path("output/result.md")
+    p = PROJECT_ROOT / "output" / "result.md"
     p.parent.mkdir(parents=True, exist_ok=True)
     p.write_text(res, encoding="utf-8")
     return p
