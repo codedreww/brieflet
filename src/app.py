@@ -1,5 +1,6 @@
 import streamlit as st
 from script import read_from_db, scoring
+from datetime import datetime, timedelta, timezone
 
 st.header("Welcome to Pscript!📚📖")
 st.write(
@@ -36,19 +37,30 @@ def format_output(results):
         link = entry[0]["link"]
 
         with st.container(border=True):
+            stored_date = entry[0].get("date")
+            if stored_date:
+                parsed_date = datetime.strptime(stored_date, "%Y-%m-%dT%H:%M:%SZ")
+                display_date = parsed_date.strftime("%d %b %Y")
+            else:
+                display_date = "Publication date unavailable"
+
             st.subheader(f"{number}) {article}")
-            st.caption(f"{source} · Match score: {score}")
+            col1, col2 = st.columns(2)
+            with col1:
+                st.write(f"date published: {display_date}")
+            with col2:
+                st.caption(f"{source} · Match score: {score}")
             st.write(f"**Why it matched:** {reason}")
 
             with st.expander("Read abstract"):
                 st.write(description)
 
-            col1, col2 = st.columns(2)
-            with col1:
+            col3, col4 = st.columns(2)
+            with col3:
                 st.link_button("Open article", link)
 
             pdf_url = link.replace("/abs/", "/pdf/", 1)
-            with col2:
+            with col4:
                 st.link_button("Open PDF in browser", pdf_url)
 
             if st.toggle("Preview PDF", key=f"preview-{link}"):
