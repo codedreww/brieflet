@@ -28,7 +28,8 @@ def get_results(selected_keywords):
 
 def format_output(results):
     if not results:
-        res += "No matching articles found."
+        st.write("No matching articles found.")
+        return
 
     for number, entry in enumerate(results, start=1):
         article = entry[0]["title"]
