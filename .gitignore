@@ -9,5 +9,9 @@ __pycache__/
 # --- Generated data & output
 data/
 output/
-# --- OS junk 
+# --- OS junk
 .DS_Store
+
+# --- Local AI-tool skills (machine-specific symlinks)
+.agents/
+.claude/skills/
