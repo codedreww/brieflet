@@ -4,7 +4,7 @@ import streamlit as st
 from brieflet.script import read_from_db, scoring
 from datetime import datetime, timedelta, timezone
 
-st.header("Welcome to Pscript!📚📖")
+st.header("Welcome to Brieflet!📚📖")
 st.write(
     "Add your keywords below and we'll find the best recent articles from Arxiv for you to read!"
 )

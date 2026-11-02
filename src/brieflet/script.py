@@ -346,9 +346,7 @@ def search():
 
 def main():
     if len(sys.argv) < 2:
-        print(
-            "Error: Please specify a mode. Usage: python3 script.py [collect|search]."
-        )
+        print("Error: Please specify a mode. Usage: brieflet [collect|search].")
         sys.exit(1)
     mode = sys.argv[1].lower()
 
