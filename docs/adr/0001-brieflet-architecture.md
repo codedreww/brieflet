@@ -124,13 +124,15 @@ C also leaves room for B later. An optional **"deep dive" agent** step can run o
    }
    ```
    It shows a **diff and suggestions** in Streamlit. I accept or edit, then it saves as a new profile version. It never silently changes what I get.
-2. **Collectors.** One small class per source type behind a common interface (`fetch(plan) -> list[RawItem]`). Each has retries with backoff, and one failing never kills the run. Start with arXiv (API by category, not one RSS feed), generic RSS/Atom, and Hacker News (Algolia API). Add Reddit and a news/search API (GNews, NewsAPI, Tavily or Exa) as an optional "long tail" collector that runs the profile's `queries`.
+2. **Collectors.** One small class per source type behind a common interface (`fetch(plan) -> list[RawItem]`). Each has retries with backoff, and one failing never kills the run. Start with arXiv (API by category, not one RSS feed: the RSS feed only lists the day's announcements and is empty on weekends), generic RSS/Atom, and Hacker News (Algolia API). For sites without a feed, point the RSS collector at an **RSSHub** route (self-hosted or public), which turns many sites into RSS for free. Add Reddit and a news/search API (GNews, NewsAPI, Tavily or Exa) as an optional "long tail" collector that runs the profile's `queries`.
 3. **Normalize + dedupe.** Canonical URL (strip tracking params, map arXiv versions `v1/v2` → one id), plus title-embedding near-duplicates (cosine > 0.92). Also strip arXiv's `arXiv:… Announce Type:` prefix.
 4. **Recall (embeddings).** Embed each item's `title + abstract/lede` once, at ingest. Embed each interest's `name + description` (plus 👍'd item examples). Score = max over interests of `weight × cosine`. Keep the top ~60. Local model by default (`bge-small-en`/`all-MiniLM` via sentence-transformers, free), or provider embeddings if configured.
 5. **Filter.** Recency window (papers ≤ 3 days, news ≤ 1 day), exclusions (embedding + keyword), and never re-send an item already in a past digest.
-6. **Rerank + summarize (LLM, one batched call).** Pass the profile plus ~60 items (title + first ~400 chars). It returns `{item_id, score 0–10, interest, why, summary}` as structured JSON. **Only summarize from the text provided** (no browsing), so it can't hallucinate content. Links come from the database, never from the model.
+6. **Rerank + summarize (LLM, one batched call).** Pass the profile plus ~60 items (title + first ~400 chars). It returns `{item_id, score 0–10, interest, why, summary}` as structured JSON. **Only summarize from the text provided** (no browsing), so it can't hallucinate content. Links come from the database, never from the model. Store and **show the numeric score next to the "why"** in Discord and Streamlit, so I can see how confident each pick is and tune thresholds.
 7. **Diversify.** Max ~3 per interest and ~4 per source. Papers and news are balanced to my ratio setting.
-8. **Feedback.** Discord reactions or Streamlit buttons write `feedback(item_id, +1/-1)`. 👍 items become positive examples in that interest's embedding. Repeated 👎 on one interest lowers its weight, and the compiler can propose "drop or narrow this topic?".
+8. **Feedback.** Discord reactions or Streamlit buttons write `feedback(item_id, +1/-1)`. Learning happens in two tiers:
+   - **Tier 1, cold start (from the first vote).** 👍 items become positive examples in that interest's embedding. Repeated 👎 on one interest lowers its weight, and the compiler can propose "drop or narrow this topic?".
+   - **Tier 2, a learned preference model (after ≥30 votes, with ≥10 of each kind).** Train a **logistic regression on the embeddings of items I've voted on** (scikit-learn, under a second). Its output `p(like)` becomes a second recall signal, blended as `recall = α · similarity + (1 − α) · p(like)`. Start with α ≈ 0.7 and lower it as votes accumulate. Retrain at the start of each daily run, and keep a held-out 20% of votes to check the model actually beats similarity alone before trusting it. This catches tastes that interest descriptions miss ("I like benchmark papers but not survey papers"). The idea comes from arxiv-sanity-lite (see Prior art).
 
 ---
 
@@ -210,6 +212,32 @@ Retention: keep `items` for 30 days, and keep `digests`/`digest_items`/`feedback
 
 ---
 
+## Prior art
+
+Similar open-source projects confirm the core choices: embedding recall, cheap LLM scoring, a no-LLM fallback, and scheduled batch runs. They also contribute a few ideas worth borrowing. These were found by search on 2026-11-01. I haven't audited their code, maintenance or licenses, so check those before reusing anything.
+
+| Project | What it does | What Brieflet borrows / where to read it |
+|---|---|---|
+| [ilonae/research-agent](https://github.com/ilonae/research-agent) (ArXiv-Paper-Digest) | arXiv feeds → skip seen papers → sentence-transformers relevance → Ollama summaries, daily on GitHub Actions | Validates the stack for stages 2–6. **Read before Phase 2 recall** |
+| [Pappet/ai_digest](https://github.com/Pappet/ai_digest) | Cheap LLM scores news 0–10, keyword fallback when the LLM is down, Ollama/OpenRouter | Same shape as our rerank stage and no-LLM mode. **Read its scoring prompt before Phase 2 rerank** |
+| [AutoLLM/ArxivDigest](https://www.github.com/AutoLLM/ArxivDigest) | Ranks arXiv papers against natural-language interest descriptions, emails a digest | Prior art for describing interests in plain text. OpenAI-only, and its license is unclear |
+| arxiv-sanity-lite (Karpathy) | Users tag papers, and a per-tag classifier recommends new ones | **Tier 2 feedback model** (stage 8) |
+| [Newscope](https://github.com/joinserve/newscope), [NewsBlur](https://www.stork.ai/en/newsblur) | Feed readers that score items against interests and learn from feedback | Showing the score and "why" (stage 6). Feedback UX ideas for Phase 3 |
+| [rundown](https://railway.com/deploy/rundown-1.md), [Discorss](https://tomevault.io/tome/mergd/discorss) | Feed → LLM summary → Discord | Reference for Discord message formatting in Phase 1 |
+| RSSHub | Generates RSS feeds for sites that don't publish one | Extends the generic RSS collector (stage 2) |
+| [RSSbrew](https://github.com/yinan-c/RSSbrew) | Rule filters (AND/OR/NOT/regex) plus AI digests | Possible syntax for hard exclusions if embedding-based exclusion proves too fuzzy |
+
+**Where Brieflet differs:**
+- An AI-made source plan with suggestions, compiled from typed preferences.
+- Papers *and* news in one digest.
+- An MCP server for bringing your own agent.
+
+None of the projects found combine all three.
+
+**Why build rather than fork:** this is a learning project. Read each reference *after* attempting the matching stage, and compare. Don't copy beforehand.
+
+---
+
 ## Consequences
 
 **Easier**
@@ -222,11 +250,13 @@ Retention: keep `items` for 30 days, and keep `digests`/`digest_items`/`feedback
 - More infrastructure: a hosted DB, secrets in GH Actions and Streamlit Cloud, and eventually a bot host.
 - Embedding models add a dependency (sentence-transformers pulls in torch, so the CI run gets heavier). The provider embeddings option avoids that.
 - Prompt and schema drift: the compiler and reranker outputs need validation and tests.
+- The Tier 2 preference model adds scikit-learn and a train/evaluate step to every run. With few votes it can overfit, which is why it's gated on vote counts and a held-out check.
 
 **To revisit**
 - When it moves to multiple users: auth on Streamlit, `user_id` on profiles/digests/feedback, and per-user schedules.
 - Whether to add the on-demand "deep dive" agent (Option B, scoped to one topic).
 - WhatsApp (Business API onboarding is heavier than Discord's, so defer it).
+- The blend weight α and the Tier 2 vote thresholds, once there's real feedback data.
 
 ---
 
@@ -249,12 +279,13 @@ Retention: keep `items` for 30 days, and keep `digests`/`digest_items`/`feedback
 10. [ ] Profile compiler → `InterestProfile`, with a suggestions and diff UI in Streamlit.
 11. [ ] Embeddings at ingest plus recall stage. Move to Postgres+pgvector (Supabase/Neon) and deploy Streamlit Cloud.
 12. [ ] LLM rerank + summary stage. Diversity caps.
-13. [ ] More collectors: generic RSS, Hacker News, then an optional search/news API.
+13. [ ] More collectors: arXiv API (replacing RSS), generic RSS (+ RSSHub routes), Hacker News, then an optional search/news API.
 
 **Phase 3 — Feedback and an interactive bot**
 14. [ ] discord.py bot on an always-on host: 👍/👎 reactions, `/prefs <text>`, `/more <topic>`.
-15. [ ] Feedback → interest weights and examples. The compiler proposes topic changes.
+15. [ ] Tier 1 feedback: interest weights and examples. The compiler proposes topic changes.
+16. [ ] Tier 2 feedback: logistic regression on voted item embeddings, blended into recall. Held-out check against similarity alone.
 
 **Phase 4 — Bring your own agent**
-16. [ ] MCP server over the same `core/` (digest, search, profile, feedback tools).
-17. [ ] Optional on-demand deep-dive agent for a single topic.
+17. [ ] MCP server over the same `core/` (digest, search, profile, feedback tools).
+18. [ ] Optional on-demand deep-dive agent for a single topic.
