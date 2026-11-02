@@ -6,7 +6,7 @@ from datetime import datetime, timedelta, timezone
 
 st.header("Welcome to Pscript!📚📖")
 st.write(
-    " Add your keywords below and we'll find the best recent articles from Arxiv for you to read!"
+    "Add your keywords below and we'll find the best recent articles from Arxiv for you to read!"
 )
 
 with st.container(border=True):
