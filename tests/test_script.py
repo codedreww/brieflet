@@ -3,7 +3,7 @@ import time
 
 import pytest
 
-from src.script import check_db, normalize_output, save_to_db
+from brieflet.script import check_db, normalize_output, save_to_db
 
 
 @pytest.fixture

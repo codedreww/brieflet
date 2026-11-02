@@ -12,24 +12,38 @@ The project is under ongoing development. I'm currently exploring ways to make i
 
 ## Run Streamlit
 
-The project requires Python with `streamlit`, `httpx`, and `feedparser` installed. Before opening the interface for the first time, collect papers from the repository root:
+The project requires Python with `streamlit`, `httpx`, and `feedparser` installed. I've made the install definition inside pyproject.toml, do run the command below to run the virtual environment and install the dependencies:
+
+To create and activate the virtual environment:
 
 ```sh
-python3 src/script.py collect
+python3.15 -m venv .venv
+source .venv/bin/activate
 ```
 
-Then run Streamlit from `src`:
+Then install the packages with this command:
 
 ```sh
-cd src
-streamlit run app.py
+pip install -e ".[dev]"
 ```
 
-## Pscript automation (macOS)
+Before opening the interface for the first time, collect papers from the repository root:
 
-The scheduler collects arXiv papers; Streamlit runs separately. The included configuration runs collection daily at **08:00 in the Mac's local timezone**.
+```sh
+brieflet collect
+```
 
-For a new setup, edit `config/pscript.plist` so the Python executable, project directory, and log paths match your machine. The Python executable used by the scheduler must have the required collection dependencies installed. From the repository root, copy the configuration into LaunchAgents:
+Then run Streamlit from the repository root:
+
+```sh
+streamlit run src/brieflet/app.py
+```
+
+## Scheduled collection (macOS)
+
+The scheduler runs `brieflet collect` from the project's virtual environment; Streamlit runs separately. The included configuration runs collection daily at **08:00 in the Mac's local timezone**.
+
+For a new setup, first create the virtual environment and install the project (see above), so `.venv/bin/brieflet` exists. Then edit `config/pscript.plist` so the `brieflet` path, project directory, and log paths match where you cloned the repository. launchd doesn't activate virtual environments, so these must be absolute paths. From the repository root, copy the configuration into LaunchAgents:
 
 ```sh
 mkdir -p ~/Library/LaunchAgents output

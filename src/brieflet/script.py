@@ -7,7 +7,7 @@ import re
 from pathlib import Path
 from datetime import datetime, timedelta, timezone
 
-PROJECT_ROOT = Path(__file__).resolve().parent.parent
+PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 DB_PATH = PROJECT_ROOT / "data" / "storage.db"
 
 

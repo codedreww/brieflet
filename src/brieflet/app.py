@@ -1,7 +1,7 @@
 # v1.0
 # Frontend using streamlit and input keywords.
 import streamlit as st
-from script import read_from_db, scoring
+from brieflet.script import read_from_db, scoring
 from datetime import datetime, timedelta, timezone
 
 st.header("Welcome to Pscript!📚📖")

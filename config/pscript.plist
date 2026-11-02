@@ -7,9 +7,7 @@
 
     <key>ProgramArguments</key>
     <array>
-        <string>/Library/Developer/CommandLineTools/usr/bin/python3</string>
-        <string>-u</string>
-        <string>/Users/andrewtan/Coding/pscript/src/script.py</string>
+        <string>/Users/andrewtan/Coding/pscript/.venv/bin/brieflet</string>
         <string>collect</string>
     </array>
 
