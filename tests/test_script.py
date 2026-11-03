@@ -1,26 +1,14 @@
 import sqlite3
 import time
+from datetime import datetime, timedelta, timezone
 
-import pytest
-
-from brieflet.script import check_db, normalize_output, save_to_db
-
-
-@pytest.fixture
-def db_path(tmp_path):
-    return tmp_path / "test_storage.db"
-
-
-@pytest.fixture
-def saved_entry():
-    return {
-        "title": "Sample Article",
-        "link": "https://example.com/article",
-        "description": "A sample article.",
-        "date": "2024-06-01T12:00:00Z",
-        "source": "arxiv",
-        "first_seen_at": "2024-06-02T09:00:00Z",
-    }
+from brieflet.script import (
+    check_db,
+    delete_old_entries,
+    normalize_output,
+    read_from_db,
+    save_to_db,
+)
 
 
 def test_normalize_missing_title():
@@ -133,3 +121,44 @@ def test_save_to_db_handles_duplicates(db_path, saved_entry):
         conn.close()
 
     assert rows == [(saved_entry["link"], saved_entry["first_seen_at"])]
+
+
+def test_read_from_db_returns_saved_entries(db_path, saved_entry):
+    check_db(db_name=db_path)
+    second_entry = {
+        **saved_entry,
+        "title": "Second Article",
+        "link": "https://example.com/article2",
+        "date": None,
+    }
+    entries = [saved_entry, second_entry]
+    save_to_db(entries, db_name=db_path)
+
+    result = read_from_db(db_name=db_path)
+
+    assert sorted(result, key=lambda entry: entry["link"]) == sorted(
+        entries, key=lambda entry: entry["link"]
+    )
+
+
+def test_delete_old_entries_removes_only_entries_older_than_seven_days(
+    db_path, saved_entry
+):
+    check_db(db_name=db_path)
+    now = datetime.now(timezone.utc).replace(microsecond=0)
+    older_entry = {
+        **saved_entry,
+        "first_seen_at": (now - timedelta(days=8)).strftime("%Y-%m-%dT%H:%M:%SZ"),
+    }
+    newer_entry = {
+        **saved_entry,
+        "title": "Newer Article",
+        "link": "https://example.com/newer",
+        "first_seen_at": (now - timedelta(days=6)).strftime("%Y-%m-%dT%H:%M:%SZ"),
+    }
+    save_to_db([older_entry, newer_entry], db_name=db_path)
+
+    deleted = delete_old_entries(db_name=db_path)
+
+    assert deleted == 1
+    assert read_from_db(db_name=db_path) == [newer_entry]

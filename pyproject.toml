@@ -16,7 +16,9 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = [
-    "pytest>=9.1.1"
+    "pytest>=9.1.1",
+    "pytest-cov",
+    "ruff"
 ]
 
 [project.scripts]
