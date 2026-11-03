@@ -263,10 +263,10 @@ None of the projects found combine all three.
 ## Action items (phased)
 
 **Phase 0 — Clean the foundation (≈1 evening)**
-1. [ ] Add `.gitignore`. Untrack `data/storage.db`, `output/*.log`, `__pycache__`, `.DS_Store`, and `cs.AI.txt`.
-2. [ ] Add `pyproject.toml` with pinned deps. Rename "Pscript" → "Brieflet" in the UI.
-3. [ ] Split `script.py` into `core/` modules (models, db, sources/arxiv, pipeline) without changing behaviour. Keep the tests green.
-4. [ ] Add retries/backoff to fetching, and a `runs` table for status.
+1. [x] Add `.gitignore`. Untrack `data/storage.db`, `output/*.log`, `__pycache__`, `.DS_Store`, and `cs.AI.txt`.
+2. [x] Add `pyproject.toml` with pinned deps. Rename "Pscript" → "Brieflet" in the UI.
+3. [x] Split `script.py` into `core/` modules (models, db, sources/arxiv, pipeline) without changing behaviour. Keep the tests green.
+4. [x] Add retries/backoff to fetching, and a `runs` table for status.
 
 **Phase 1 — A stored digest delivered to Discord (MVP)**
 5. [ ] `digests` + `digest_items` tables. `brieflet run-daily` builds and stores the digest.

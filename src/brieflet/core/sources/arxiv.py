@@ -1,33 +1,68 @@
+import logging
 import time
 
 import feedparser
 import httpx
 
+logger = logging.getLogger(__name__)
 
-def fetch_rss_feed(link: str):
+# Server-side or rate-limit statuses that may succeed on a later attempt.
+# Other non-200 statuses (404, 403, ...) won't fix themselves, so they fail at once.
+RETRYABLE_STATUS_CODES = {429, 500, 502, 503, 504}
+
+
+class FetchError(Exception):
+    """Raised when a feed can't be fetched."""
+
+
+def fetch_rss_feed(link: str, attempts=3, base_delay=1.0, sleep=time.sleep):
     """
-    Fetch RSS feed content from the provided link.
+    Fetch RSS feed content from the provided link, retrying transient failures.
+
+    Timeouts, connection errors and retryable status codes are retried with
+    exponential backoff: base_delay, then 2 * base_delay, then 4 * base_delay, ...
 
     Args:
         link: URL of the RSS feed.
+        attempts: Total number of tries before giving up.
+        base_delay: Seconds to wait before the first retry.
+        sleep: Function used to wait; tests pass a fake to avoid real delays.
 
     Returns:
         Raw RSS feed content as bytes.
 
     Raises:
-        Exception: If the request fails or the response is not successful.
+        FetchError: If every attempt fails, or the response status isn't retryable.
     """
-    try:
-        response = httpx.get(link, timeout=10.0)
-        if response.status_code != 200:
-            raise Exception(
+    for attempt in range(1, attempts + 1):
+        try:
+            response = httpx.get(link, timeout=10.0)
+        except httpx.TimeoutException as e:
+            error = FetchError("Request timed out while fetching the RSS feed.")
+            error.__cause__ = e
+        except httpx.RequestError as e:
+            error = FetchError(f"An error occurred while fetching the RSS feed: {e}")
+            error.__cause__ = e
+        else:
+            if response.status_code == 200:
+                return response.content
+            error = FetchError(
                 f"Failed to fetch RSS feed. Status code: {response.status_code}"
             )
-        return response.content
-    except httpx.TimeoutException as e:
-        raise Exception("Request timed out while fetching the RSS feed.") from e
-    except httpx.RequestError as e:
-        raise Exception(f"An error occurred while fetching the RSS feed: {e}") from e
+            if response.status_code not in RETRYABLE_STATUS_CODES:
+                raise error
+
+        if attempt == attempts:
+            raise error
+        delay = base_delay * 2 ** (attempt - 1)
+        logger.warning(
+            "Fetch attempt %d/%d failed (%s); retrying in %.0fs",
+            attempt,
+            attempts,
+            error,
+            delay,
+        )
+        sleep(delay)
 
 
 def parse_rss_feed(rss_feed: bytes):
@@ -65,9 +100,9 @@ def normalize_output(entry, source):
 
     if not title or not link:
         if not title:
-            print(f"Skipping entry, missing title: {title}")
+            logger.warning("Skipping entry, missing title: %s", title)
         if not link:
-            print(f"Skipping entry, missing link: {link}")
+            logger.warning("Skipping entry, missing link: %s", link)
         return None
     normalized_entry = {
         "title": entry.get("title", None),

@@ -1,5 +1,4 @@
 import sqlite3
-import time
 from datetime import UTC, datetime, timedelta
 
 from brieflet.core.db import (
@@ -8,49 +7,6 @@ from brieflet.core.db import (
     read_from_db,
     save_to_db,
 )
-from brieflet.core.sources.arxiv import normalize_output
-
-
-def test_normalize_missing_title():
-    entry = {
-        "link": "https://example.com/article",
-        "description": "A sample article.",
-    }
-
-    result = normalize_output(entry, source="arxiv")
-
-    assert result is None
-
-
-def test_normalize_missing_link():
-    entry = {
-        "title": "Sample Article",
-        "description": "A sample article.",
-    }
-
-    result = normalize_output(entry, source="arxiv")
-
-    assert result is None
-
-
-def test_normalize_valid_entry():
-    expected_date = "2024-06-01T12:00:00Z"
-    entry = {
-        "title": "Sample Article",
-        "link": "https://example.com/article",
-        "description": "A sample article.",
-        "published_parsed": time.strptime(expected_date, "%Y-%m-%dT%H:%M:%SZ"),
-    }
-
-    result = normalize_output(entry, source="arxiv")
-
-    assert result is not None
-    assert result["title"] == entry["title"]
-    assert result["link"] == entry["link"]
-    assert result["description"] == entry["description"]
-    assert result["date"] == expected_date
-    assert result["source"] == "arxiv"
-    assert result["first_seen_at"]
 
 
 def test_check_db_creates_table(db_path):

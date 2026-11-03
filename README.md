@@ -84,6 +84,12 @@ launchctl kickstart "gui/$(id -u)/com.andrewtan.pscript.collect"
 launchctl print "gui/$(id -u)/com.andrewtan.pscript.collect"
 ```
 
+**See what recent collection runs did** (when they ran, how many items were fetched and new, and any error):
+
+```sh
+brieflet status
+```
+
 | Command     | Purpose                                                  |
 | ----------- | -------------------------------------------------------- |
 | `bootstrap` | Loads the job definition.                                |
