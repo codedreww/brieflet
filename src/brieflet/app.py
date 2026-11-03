@@ -6,6 +6,7 @@ import streamlit as st
 
 from brieflet.core.db import read_from_db
 from brieflet.core.scoring import scoring
+from brieflet.core.formatting import display_date
 
 st.header("Welcome to Brieflet!📚📖")
 st.write(
@@ -44,11 +45,7 @@ def format_output(results):
 
         with st.container(border=True):
             stored_date = entry[0].get("date")
-            if stored_date:
-                parsed_date = datetime.strptime(stored_date, "%Y-%m-%dT%H:%M:%SZ")
-                display_date = parsed_date.strftime("%d %b %Y")
-            else:
-                display_date = "Publication date unavailable"
+            display_date = display_date(stored_date)
 
             st.subheader(f"{number}) {article}")
             col1, col2 = st.columns(2)
