@@ -3,7 +3,7 @@ from datetime import datetime
 from brieflet.config import OUTPUT_DIR
 
 
-def display_date(stored_date):
+def convert_date(stored_date):
     if stored_date:
         parsed_date = datetime.strptime(stored_date, "%Y-%m-%dT%H:%M:%SZ")
         display_date = parsed_date.strftime("%d %b %Y")
@@ -25,7 +25,7 @@ def format_output_txt(result):
         link = entry[0]["link"]
 
         stored_date = entry[0].get("date")
-        display_date = display_date(stored_date)
+        display_date = convert_date(stored_date)
 
         line = f"Article: {article}\nScore: {score} | Source: {source}\nPublished: {display_date}\nLink: {link}\n\nDescription: {description}\nReason: {reason}"
         res += f"{number}.\n{line}\n\n"
@@ -51,7 +51,7 @@ def format_output_md(keywords, result):
         link = entry[0]["link"]
 
         stored_date = entry[0].get("date")
-        display_date = display_date(stored_date)
+        display_date = convert_date(stored_date)
 
         res += f"#### {number}. {article}\n\n"
         res += f"**Score** : {score}\n"

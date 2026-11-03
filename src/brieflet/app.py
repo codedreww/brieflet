@@ -1,12 +1,11 @@
 # v1.0
 # Frontend using streamlit and input keywords.
-from datetime import datetime
 
 import streamlit as st
 
 from brieflet.core.db import read_from_db
+from brieflet.core.formatting import convert_date
 from brieflet.core.scoring import scoring
-from brieflet.core.formatting import display_date
 
 st.header("Welcome to Brieflet!📚📖")
 st.write(
@@ -45,7 +44,7 @@ def format_output(results):
 
         with st.container(border=True):
             stored_date = entry[0].get("date")
-            display_date = display_date(stored_date)
+            display_date = convert_date(stored_date)
 
             st.subheader(f"{number}) {article}")
             col1, col2 = st.columns(2)
