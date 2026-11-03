@@ -1,4 +1,5 @@
-from brieflet.script import format_output_txt, format_output_md, scoring
+from brieflet.core.formatting import format_output_md, format_output_txt
+from brieflet.core.scoring import scoring
 
 
 def test_format_output_txt_returns_no_matching_articles():

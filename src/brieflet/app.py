@@ -1,8 +1,11 @@
 # v1.0
 # Frontend using streamlit and input keywords.
+from datetime import datetime
+
 import streamlit as st
-from brieflet.script import read_from_db, scoring
-from datetime import datetime, timedelta, timezone
+
+from brieflet.core.db import read_from_db
+from brieflet.core.scoring import scoring
 
 st.header("Welcome to Brieflet!📚📖")
 st.write(

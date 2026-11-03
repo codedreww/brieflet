@@ -2,7 +2,7 @@ from pathlib import Path
 
 import pytest
 
-from brieflet.script import normalize_output, parse_rss_feed
+from brieflet.core.sources.arxiv import normalize_output, parse_rss_feed
 
 
 def test_parse_rss_feed_normalizes_arxiv_fixture_entries():

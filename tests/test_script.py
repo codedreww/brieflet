@@ -1,14 +1,14 @@
 import sqlite3
 import time
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
-from brieflet.script import (
+from brieflet.core.db import (
     check_db,
     delete_old_entries,
-    normalize_output,
     read_from_db,
     save_to_db,
 )
+from brieflet.core.sources.arxiv import normalize_output
 
 
 def test_normalize_missing_title():
@@ -145,7 +145,7 @@ def test_delete_old_entries_removes_only_entries_older_than_seven_days(
     db_path, saved_entry
 ):
     check_db(db_name=db_path)
-    now = datetime.now(timezone.utc).replace(microsecond=0)
+    now = datetime.now(UTC).replace(microsecond=0)
     older_entry = {
         **saved_entry,
         "first_seen_at": (now - timedelta(days=8)).strftime("%Y-%m-%dT%H:%M:%SZ"),
