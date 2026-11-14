@@ -1,29 +1,53 @@
 import sqlite3
 from datetime import UTC, datetime, timedelta
 
+import pytest
+
 from brieflet.core.db import (
     check_db,
+    connect,
     delete_old_entries,
     read_from_db,
     save_to_db,
 )
 
 
-def test_check_db_creates_table(db_path):
+def test_check_db_creates_tables(db_path):
     check_db(db_name=db_path)
 
     assert db_path.is_file()
 
     conn = sqlite3.connect(db_path)
     try:
-        row = conn.execute(
+        rows = conn.execute(
             "SELECT name FROM sqlite_master "
-            "WHERE type = 'table' AND name = 'entries'"
-        ).fetchone()
+            "WHERE type = 'table' AND name != 'sqlite_sequence'"
+        ).fetchall()
     finally:
         conn.close()
 
-    assert row == ("entries",)
+    assert {name for (name,) in rows} == {
+        "entries",
+        "runs",
+        "settings",
+        "digests",
+        "digest_items",
+    }
+
+
+def test_digest_items_require_an_existing_digest(db_path):
+    check_db(db_name=db_path)
+
+    conn = connect(db_path)
+    try:
+        with pytest.raises(sqlite3.IntegrityError, match="FOREIGN KEY"):
+            conn.execute(
+                "INSERT INTO digest_items "
+                "(digest_id, rank, score, reasons, title, link, source) "
+                "VALUES (999, 1, 5, 'ai in title', 'T', 'https://x', 'arxiv')"
+            )
+    finally:
+        conn.close()
 
 
 def test_save_to_db_inserts_entries(db_path, saved_entry):

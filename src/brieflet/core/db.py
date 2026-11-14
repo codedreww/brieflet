@@ -11,12 +11,18 @@ def utc_now_text():
     return datetime.now(UTC).strftime(TIMESTAMP_FORMAT)
 
 
+def connect(db_name):
+    conn = sqlite3.connect(db_name)
+    conn.execute("PRAGMA foreign_keys = ON")
+    return conn
+
+
 def check_db(db_name=DB_PATH):
     """
     Check if the database and tables exist, and create them if they don't.
     """
     Path(db_name).parent.mkdir(parents=True, exist_ok=True)
-    conn = sqlite3.connect(db_name)
+    conn = connect(db_name)
     cur = conn.cursor()
     cur.execute("""
         CREATE TABLE IF NOT EXISTS entries (
@@ -41,6 +47,36 @@ def check_db(db_name=DB_PATH):
             error TEXT
         )
     """)
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS settings (
+            key TEXT PRIMARY KEY,
+            value TEXT NOT NULL,
+            updated_at TEXT NOT NULL
+        )
+    """)
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS digests (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            digest_date TEXT NOT NULL UNIQUE,
+            keywords TEXT NOT NULL,
+            created_at TEXT NOT NULL,
+            delivered_at TEXT
+        )
+    """)
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS digest_items(
+            digest_id INTEGER NOT NULL REFERENCES digests(id),
+            rank INTEGER NOT NULL,
+            score INTEGER NOT NULL,
+            reasons TEXT NOT NULL,
+            title TEXT NOT NULL,
+            link TEXT NOT NULL,
+            source TEXT NOT NULL,
+            date TEXT,
+            description TEXT,
+            PRIMARY KEY (digest_id, rank)
+        )
+    """)
     conn.commit()
     conn.close()
 
@@ -56,7 +92,7 @@ def save_to_db(entries, db_name=DB_PATH):
     Returns:
         Number of entries that were new (duplicates by link are skipped).
     """
-    conn = sqlite3.connect(db_name)
+    conn = connect(db_name)
     cur = conn.cursor()
     inserted = 0
     for entry in entries:
@@ -90,7 +126,7 @@ def read_from_db(db_name=DB_PATH):
     Returns:
         List of entries from the database.
     """
-    conn = sqlite3.connect(db_name)
+    conn = connect(db_name)
     conn.row_factory = sqlite3.Row
     cur = conn.cursor()
     cur.execute(
@@ -104,7 +140,7 @@ def read_from_db(db_name=DB_PATH):
 def delete_old_entries(db_name=DB_PATH):
     cutoff = datetime.now(UTC).replace(microsecond=0) - timedelta(days=7)
     cutoff_text = cutoff.strftime("%Y-%m-%dT%H:%M:%SZ")
-    conn = sqlite3.connect(db_name)
+    conn = connect(db_name)
 
     try:
         cur = conn.cursor()
@@ -123,7 +159,7 @@ def start_run(db_name=DB_PATH):
     Returns:
         The new run's id, to pass to finish_run.
     """
-    conn = sqlite3.connect(db_name)
+    conn = connect(db_name)
     try:
         cur = conn.cursor()
         cur.execute(
@@ -148,7 +184,7 @@ def finish_run(
     """
     Record how a collection run ended ('success' or 'failed').
     """
-    conn = sqlite3.connect(db_name)
+    conn = connect(db_name)
     try:
         conn.execute(
             """
@@ -176,7 +212,7 @@ def read_recent_runs(limit=10, db_name=DB_PATH):
     """
     Read the most recent collection runs, newest first.
     """
-    conn = sqlite3.connect(db_name)
+    conn = connect(db_name)
     conn.row_factory = sqlite3.Row
     try:
         rows = conn.execute(

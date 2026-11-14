@@ -1,7 +1,8 @@
+import time
 from pathlib import Path
 
 import pytest
-import time
+
 from brieflet.core.sources.arxiv import normalize_output, parse_rss_feed
 
 
@@ -21,9 +22,6 @@ def test_parse_rss_feed_normalizes_arxiv_fixture_entries():
 def test_parse_rss_feed_rejects_invalid_content():
     with pytest.raises(ValueError):
         parse_rss_feed(b"not a feed at all")
-
-
-from brieflet.core.sources.arxiv import normalize_output
 
 
 def test_normalize_missing_title():
