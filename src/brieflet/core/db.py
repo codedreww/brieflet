@@ -137,6 +137,34 @@ def read_from_db(db_name=DB_PATH):
     return [dict(row) for row in rows]
 
 
+def get_setting(key, default=None, db_name=DB_PATH):
+    conn = connect(db_name)
+    try:
+        cur = conn.cursor()
+        cur.execute("SELECT value FROM settings WHERE key = ?", (key,))
+        value = cur.fetchone()
+        if value is None:
+            return default
+        return value[0]
+    finally:
+        conn.close()
+
+
+def set_setting(key, value, db_name=DB_PATH):
+    conn = connect(db_name)
+    updated_at = utc_now_text()
+    try:
+        cur = conn.cursor()
+        cur.execute(
+            "INSERT INTO settings (key, value, updated_at) VALUES (?, ?, ?) "
+            "ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at",
+            (key, value, updated_at),
+        )
+        conn.commit()
+    finally:
+        conn.close()
+
+
 def delete_old_entries(db_name=DB_PATH):
     cutoff = datetime.now(UTC).replace(microsecond=0) - timedelta(days=7)
     cutoff_text = cutoff.strftime("%Y-%m-%dT%H:%M:%SZ")

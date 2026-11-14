@@ -3,12 +3,15 @@ from datetime import UTC, datetime, timedelta
 
 import pytest
 
+from brieflet.core import db
 from brieflet.core.db import (
     check_db,
     connect,
     delete_old_entries,
+    get_setting,
     read_from_db,
     save_to_db,
+    set_setting,
 )
 
 
@@ -142,3 +145,82 @@ def test_delete_old_entries_removes_only_entries_older_than_seven_days(
 
     assert deleted == 1
     assert read_from_db(db_name=db_path) == [newer_entry]
+
+
+def test_empty_settings_db(db_path):
+    check_db(db_name=db_path)
+    res = get_setting("key", db_name=db_path)
+    assert res is None
+
+
+def test_get_setting_returns_given_default_when_missing(db_path):
+    check_db(db_name=db_path)
+
+    assert get_setting("keywords", default="AI", db_name=db_path) == "AI"
+
+
+def test_return_settings_db(db_path):
+    check_db(db_name=db_path)
+    conn = connect(db_path)
+    try:
+        conn.execute(
+            "INSERT INTO settings (key, value, updated_at) VALUES ('keywords', 'Database, Performance', '2024-06-02T09:00:00Z')"
+        )
+        conn.commit()
+    finally:
+        conn.close()
+
+    res = get_setting("keywords", db_name=db_path)
+    assert res == "Database, Performance"
+
+
+def count_settings_rows(db_path):
+    conn = sqlite3.connect(db_path)
+    try:
+        return conn.execute("SELECT COUNT(*) FROM settings").fetchone()[0]
+    finally:
+        conn.close()
+
+
+def read_updated_at(db_path, key):
+    conn = sqlite3.connect(db_path)
+    try:
+        return conn.execute(
+            "SELECT updated_at FROM settings WHERE key = ?", (key,)
+        ).fetchone()[0]
+    finally:
+        conn.close()
+
+
+def test_set_setting_inserts_new_key(db_path):
+    check_db(db_name=db_path)
+
+    set_setting("keywords", "LLM, agents", db_name=db_path)
+
+    assert get_setting("keywords", db_name=db_path) == "LLM, agents"
+    assert count_settings_rows(db_path) == 1
+
+
+def test_set_setting_twice_updates_the_same_row(db_path, monkeypatch):
+    check_db(db_name=db_path)
+    timestamps = iter(["2026-11-01T08:00:00Z", "2026-11-02T08:00:00Z"])
+    monkeypatch.setattr(db, "utc_now_text", lambda: next(timestamps))
+
+    set_setting("keywords", "a", db_name=db_path)
+    set_setting("keywords", "b", db_name=db_path)
+
+    assert get_setting("keywords", db_name=db_path) == "b"
+    assert count_settings_rows(db_path) == 1  # an upsert, not two inserts
+    assert read_updated_at(db_path, "keywords") == "2026-11-02T08:00:00Z"
+
+
+def test_set_setting_keeps_other_keys(db_path):
+    check_db(db_name=db_path)
+
+    set_setting("keywords", "a", db_name=db_path)
+    set_setting("digest_size", "10", db_name=db_path)
+    set_setting("keywords", "b", db_name=db_path)
+
+    assert get_setting("keywords", db_name=db_path) == "b"
+    assert get_setting("digest_size", db_name=db_path) == "10"
+    assert count_settings_rows(db_path) == 2
