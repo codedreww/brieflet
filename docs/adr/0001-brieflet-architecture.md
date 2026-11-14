@@ -165,7 +165,7 @@ The current launchd-on-laptop setup is the main reliability problem. There are t
 
 | Piece | Needs | Recommendation |
 |---|---|---|
-| **Daily pipeline** (collect → rank → digest → send) | Runs once a day, ~1–3 min | **GitHub Actions cron** (free, logs, retries) to start. Move it into the worker host if one exists |
+| **Daily pipeline** (collect → rank → digest → send) | Runs once a day, ~1–3 min | **launchd on the Mac in Phase 1**, while the database is local SQLite. **GitHub Actions cron** (free, logs, retries) from Phase 2, once the database is hosted. Move it into the worker host if one exists |
 | **Streamlit app** | Always reachable, light | **Streamlit Community Cloud** (free) |
 | **Discord** | Push only → nothing. Interactive (slash commands, reactions) → an always-on process | **Phase 1: Discord webhook** (no bot, no host, one HTTP POST). **Phase 3: discord.py bot** on a small always-on host (Fly.io / Railway / a cheap VPS / a Raspberry Pi) |
 | **Database** | Shared by all of the above | **Hosted Postgres with pgvector** (Supabase or Neon free tier). Streamlit Cloud and GH Actions have ephemeral disks, so a local SQLite file won't survive there |
@@ -268,24 +268,28 @@ None of the projects found combine all three.
 3. [x] Split `script.py` into `core/` modules (models, db, sources/arxiv, pipeline) without changing behaviour. Keep the tests green.
 4. [x] Add retries/backoff to fetching, and a `runs` table for status.
 
-**Phase 1 — A stored digest delivered to Discord (MVP)**
-5. [ ] `digests` + `digest_items` tables. `brieflet run-daily` builds and stores the digest.
-6. [ ] Discord webhook delivery (embed per item: title, why, link).
-7. [ ] GitHub Actions cron for `run-daily`. Retire launchd.
-8. [ ] Streamlit "Today" and "History" pages read stored digests instead of scoring live.
+**Phase 1 — A stored digest delivered to Discord (MVP, runs locally)**
 
-**Phase 2 — Natural-language preferences and semantic ranking**
-9. [ ] `LLMProvider` via LiteLLM + no-LLM fallback.
-10. [ ] Profile compiler → `InterestProfile`, with a suggestions and diff UI in Streamlit.
-11. [ ] Embeddings at ingest plus recall stage. Move to Postgres+pgvector (Supabase/Neon) and deploy Streamlit Cloud.
-12. [ ] LLM rerank + summary stage. Diversity caps.
-13. [ ] More collectors: arXiv API (replacing RSS), generic RSS (+ RSSHub routes), Hacker News, then an optional search/news API.
+Decided 2026-11-03: Phase 1 stays local, on SQLite and launchd. GitHub Actions and Streamlit Cloud both have ephemeral disks, so they only work once a hosted database exists. All three cloud pieces move together at the start of Phase 2. This gets the first Discord briefing working sooner, and introduces one new concept at a time.
+
+5. [ ] Saved keyword preferences, plus `digests` + `digest_items` tables. `brieflet run-daily` = collect → score (keywords, excluding items already sent) → store the digest.
+6. [ ] Discord webhook delivery (one embed per item: title, why, score, link). The webhook URL lives in `.env`, never in git.
+7. [ ] Point launchd at `brieflet run-daily` instead of `collect`.
+8. [ ] Streamlit "Today", "History" and "Preferences" pages read stored digests and saved keywords instead of scoring live.
+
+**Phase 2 — Move to the cloud, then natural-language preferences and semantic ranking**
+9. [ ] Move to the cloud together: hosted Postgres (Supabase/Neon) behind the repository layer, a GitHub Actions cron for `run-daily` with secrets, and Streamlit Community Cloud. Retire launchd.
+10. [ ] `LLMProvider` via LiteLLM + no-LLM fallback.
+11. [ ] Profile compiler → `InterestProfile`, with a suggestions and diff UI in Streamlit.
+12. [ ] Embeddings at ingest plus recall stage (pgvector).
+13. [ ] LLM rerank + summary stage. Diversity caps.
+14. [ ] More collectors: arXiv API (replacing RSS), generic RSS (+ RSSHub routes), Hacker News, then an optional search/news API.
 
 **Phase 3 — Feedback and an interactive bot**
-14. [ ] discord.py bot on an always-on host: 👍/👎 reactions, `/prefs <text>`, `/more <topic>`.
-15. [ ] Tier 1 feedback: interest weights and examples. The compiler proposes topic changes.
-16. [ ] Tier 2 feedback: logistic regression on voted item embeddings, blended into recall. Held-out check against similarity alone.
+15. [ ] discord.py bot on an always-on host: 👍/👎 reactions, `/prefs <text>`, `/more <topic>`.
+16. [ ] Tier 1 feedback: interest weights and examples. The compiler proposes topic changes.
+17. [ ] Tier 2 feedback: logistic regression on voted item embeddings, blended into recall. Held-out check against similarity alone.
 
 **Phase 4 — Bring your own agent**
-17. [ ] MCP server over the same `core/` (digest, search, profile, feedback tools).
-18. [ ] Optional on-demand deep-dive agent for a single topic.
+18. [ ] MCP server over the same `core/` (digest, search, profile, feedback tools).
+19. [ ] Optional on-demand deep-dive agent for a single topic.
