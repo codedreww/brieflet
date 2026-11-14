@@ -63,6 +63,30 @@ def format_output_md(keywords, result):
     return res
 
 
+def format_digest_txt(digest):
+    """
+    Format a stored digest (as returned by get_digest) as plain text.
+    """
+    header = (
+        f"Digest for {digest['digest_date']}\n"
+        f"Keywords: {digest['keywords']}\n"
+        f"Delivered: {digest['delivered_at'] or 'not yet'}\n"
+    )
+    if not digest["items"]:
+        return header + "\nNo matching articles found."
+
+    lines = [header]
+    for item in digest["items"]:
+        lines.append(
+            f"{item['rank']}. {item['title']}\n"
+            f"   Score: {item['score']} | Source: {item['source']} | "
+            f"Published: {convert_date(item['date'])}\n"
+            f"   Why: {item['reasons']}\n"
+            f"   {item['link']}"
+        )
+    return "\n".join(lines)
+
+
 def create_markdown(res):
     p = OUTPUT_DIR / "result.md"
     p.parent.mkdir(parents=True, exist_ok=True)
