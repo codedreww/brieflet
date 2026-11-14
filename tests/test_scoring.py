@@ -137,6 +137,28 @@ def test_only_top_five_articles_are_returned(make_article):
     assert all(score == 7 for article, score, reasons in result)
 
 
+def test_limit_returns_more_than_five(make_article):
+    data = [make_article(title=f"Security article {number}") for number in range(8)]
+
+    result = scoring("security", data, limit=10)
+
+    assert len(result) == 8
+
+
+def test_limit_keeps_the_highest_scores(make_article):
+    title_only = make_article(title="Security news")
+    title_and_description = make_article(
+        title="Security deep dive", description="all about security"
+    )
+    description_only = make_article(description="a note on security")
+    data = [description_only, title_only, title_and_description]
+
+    result = scoring("security", data, limit=2)
+
+    assert [score for _, score, _ in result] == [7, 5]
+    assert [article for article, _, _ in result] == [title_and_description, title_only]
+
+
 def test_same_score_orders_newest_first_seen_at_first(make_article):
     older_article = make_article(
         title="Security article from yesterday",

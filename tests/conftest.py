@@ -1,4 +1,21 @@
+import httpx
 import pytest
+
+
+@pytest.fixture(autouse=True)
+def block_network(monkeypatch):
+    """
+    Fail any test that reaches the real network.
+
+    Tests must fake fetching (e.g. patch pipeline.fetch_rss_feed). If a patch
+    targets the wrong module, this turns a silent real request into a clear error.
+    """
+
+    def blocked(*args, **kwargs):
+        raise RuntimeError("Network access is disabled in tests; patch the fetch.")
+
+    monkeypatch.setattr(httpx, "get", blocked)
+    monkeypatch.setattr(httpx.Client, "send", blocked)
 
 
 @pytest.fixture

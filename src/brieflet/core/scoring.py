@@ -21,7 +21,7 @@ def sort_score(matches):
     )
 
 
-def scoring(keywords, data):
+def scoring(keywords, data, limit=5):
     """
     Scores websites based on keywords inputted by the user.
 
@@ -72,5 +72,4 @@ def scoring(keywords, data):
             matches.append([arcticle, score, formatted_reasons])
 
     sorted_matches = sort_score(matches)
-    return sorted_matches[:5]
-
+    return sorted_matches[:limit]

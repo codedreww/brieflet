@@ -3,6 +3,7 @@ from pathlib import Path
 import pytest
 
 from brieflet import cli
+from brieflet.core import pipeline
 from brieflet.core.db import read_from_db, read_recent_runs
 from brieflet.core.sources.arxiv import FetchError
 
@@ -11,11 +12,14 @@ FIXTURE_FEED = Path(__file__).parent / "fixtures" / "arxiv_cs_ai.xml"
 
 @pytest.fixture
 def feed_from_fixture(monkeypatch):
-    monkeypatch.setattr(cli, "fetch_rss_feed", lambda url: FIXTURE_FEED.read_bytes())
+    # Patch where the name is *used*: collect() looks up fetch_rss_feed in pipeline.
+    monkeypatch.setattr(
+        pipeline, "fetch_rss_feed", lambda url: FIXTURE_FEED.read_bytes()
+    )
 
 
 def test_collect_records_successful_run(db_path, feed_from_fixture):
-    cli.collect(db_name=db_path)
+    pipeline.collect(db_name=db_path)
 
     runs = read_recent_runs(db_name=db_path)
     assert len(runs) == 1
@@ -29,8 +33,8 @@ def test_collect_records_successful_run(db_path, feed_from_fixture):
 
 
 def test_second_collect_counts_no_new_items(db_path, feed_from_fixture):
-    cli.collect(db_name=db_path)
-    cli.collect(db_name=db_path)
+    pipeline.collect(db_name=db_path)
+    pipeline.collect(db_name=db_path)
 
     latest, first = read_recent_runs(db_name=db_path)
     assert latest["items_fetched"] == first["items_fetched"]
@@ -41,10 +45,10 @@ def test_collect_records_failed_run_and_reraises(db_path, monkeypatch):
     def failing_fetch(url):
         raise FetchError("Connection reset by peer")
 
-    monkeypatch.setattr(cli, "fetch_rss_feed", failing_fetch)
+    monkeypatch.setattr(pipeline, "fetch_rss_feed", failing_fetch)
 
     with pytest.raises(FetchError):
-        cli.collect(db_name=db_path)
+        pipeline.collect(db_name=db_path)
 
     (run,) = read_recent_runs(db_name=db_path)
     assert run["status"] == "failed"
@@ -52,8 +56,13 @@ def test_collect_records_failed_run_and_reraises(db_path, monkeypatch):
     assert run["finished_at"] is not None
 
 
+def test_cli_uses_the_pipeline_collect():
+    # cli.py should re-use core's collect, not keep its own copy.
+    assert cli.collect is pipeline.collect
+
+
 def test_status_prints_recent_runs(db_path, feed_from_fixture, capsys):
-    cli.collect(db_name=db_path)
+    pipeline.collect(db_name=db_path)
 
     cli.status(db_name=db_path)
 
