@@ -7,9 +7,12 @@ from brieflet.core import db
 from brieflet.core.db import (
     check_db,
     connect,
+    create_digest,
     delete_old_entries,
+    get_digest,
     get_setting,
     read_from_db,
+    read_unsent_entries,
     save_to_db,
     set_setting,
 )
@@ -224,3 +227,117 @@ def test_set_setting_keeps_other_keys(db_path):
     assert get_setting("keywords", db_name=db_path) == "b"
     assert get_setting("digest_size", db_name=db_path) == "10"
     assert count_settings_rows(db_path) == 2
+
+
+# --- Digests -----------------------------------------------------------------
+
+
+def count_rows(db_path, table):
+    conn = sqlite3.connect(db_path)
+    try:
+        return conn.execute(f"SELECT COUNT(*) FROM {table}").fetchone()[0]
+    finally:
+        conn.close()
+
+
+@pytest.fixture
+def stored_articles(db_path, make_article):
+    """Three articles saved in `entries`, returned as scoring() would see them."""
+    check_db(db_name=db_path)
+    articles = [
+        make_article(title="Agents for Security", date="2026-10-08T00:00:00Z"),
+        make_article(title="Security benchmarks", description="a benchmark"),
+        make_article(title="Robotics today"),
+    ]
+    save_to_db(articles, db_name=db_path)
+    return articles
+
+
+def test_create_digest_round_trip(db_path, stored_articles):
+    first, second, _ = stored_articles
+    matches = [[first, 7, "security in title"], [second, 5, "security in title"]]
+
+    digest_id = create_digest("2026-11-03", "security", matches, db_name=db_path)
+    digest = get_digest("2026-11-03", db_name=db_path)
+
+    assert digest["id"] == digest_id
+    assert digest["digest_date"] == "2026-11-03"
+    assert digest["keywords"] == "security"
+    assert digest["created_at"]
+    assert digest["delivered_at"] is None
+    assert [item["rank"] for item in digest["items"]] == [1, 2]
+    assert [item["title"] for item in digest["items"]] == [
+        "Agents for Security",
+        "Security benchmarks",
+    ]
+    top = digest["items"][0]
+    assert top["score"] == 7
+    assert top["reasons"] == "security in title"
+    assert top["link"] == first["link"]
+    assert top["date"] == "2026-10-08T00:00:00Z"
+
+
+def test_create_digest_with_no_matches_stores_an_empty_digest(db_path):
+    check_db(db_name=db_path)
+
+    create_digest("2026-11-03", "nothing matches", [], db_name=db_path)
+
+    digest = get_digest("2026-11-03", db_name=db_path)
+    assert digest["keywords"] == "nothing matches"
+    assert digest["items"] == []
+
+
+def test_create_digest_is_all_or_nothing(db_path, stored_articles):
+    first, second, _ = stored_articles
+    broken = {key: value for key, value in second.items() if key != "title"}
+    matches = [[first, 7, "security in title"], [broken, 5, "security in title"]]
+
+    with pytest.raises(KeyError):
+        create_digest("2026-11-03", "security", matches, db_name=db_path)
+
+    # The digest row and the first item were inserted before the failure;
+    # the transaction must have rolled both back.
+    assert count_rows(db_path, "digests") == 0
+    assert count_rows(db_path, "digest_items") == 0
+    assert get_digest("2026-11-03", db_name=db_path) is None
+
+
+def test_only_one_digest_per_date(db_path, stored_articles):
+    create_digest("2026-11-03", "security", [], db_name=db_path)
+
+    with pytest.raises(sqlite3.IntegrityError, match="UNIQUE"):
+        create_digest("2026-11-03", "security", [], db_name=db_path)
+
+
+def test_get_digest_missing_date_returns_none(db_path):
+    check_db(db_name=db_path)
+
+    assert get_digest("2020-01-01", db_name=db_path) is None
+
+
+def test_digest_snapshot_survives_entry_deletion(db_path, stored_articles):
+    first = stored_articles[0]
+    create_digest("2026-11-03", "security", [[first, 7, "x"]], db_name=db_path)
+
+    conn = sqlite3.connect(db_path)
+    try:
+        conn.execute("DELETE FROM entries")
+        conn.commit()
+    finally:
+        conn.close()
+
+    (item,) = get_digest("2026-11-03", db_name=db_path)["items"]
+    assert item["title"] == first["title"]
+    assert item["link"] == first["link"]
+
+
+def test_read_unsent_entries_skips_entries_already_in_a_digest(
+    db_path, stored_articles
+):
+    first, second, third = stored_articles
+    assert len(read_unsent_entries(db_name=db_path)) == 3
+
+    create_digest("2026-11-03", "security", [[first, 7, "x"]], db_name=db_path)
+
+    unsent_links = {entry["link"] for entry in read_unsent_entries(db_name=db_path)}
+    assert unsent_links == {second["link"], third["link"]}

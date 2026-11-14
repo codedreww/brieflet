@@ -249,3 +249,96 @@ def read_recent_runs(limit=10, db_name=DB_PATH):
         return [dict(row) for row in rows]
     finally:
         conn.close()
+
+
+def read_unsent_entries(db_name=DB_PATH):
+    """
+    Read entries that haven't appeared in any digest yet.
+    """
+    conn = connect(db_name)
+    conn.row_factory = sqlite3.Row
+    try:
+        cur = conn.cursor()
+        cur.execute(
+            "SELECT title, link, description, date, source, first_seen_at FROM entries WHERE link NOT IN (SELECT link FROM digest_items)"
+        )
+        rows = cur.fetchall()
+        return [dict(row) for row in rows]
+    finally:
+        conn.close()
+
+
+def create_digest(digest_date, keywords, matches, db_name=DB_PATH):
+    """
+    Store a digest and a snapshot of its items, all-or-nothing.
+
+    Args:
+        digest_date: Local date of the digest, 'YYYY-MM-DD'. One digest per date.
+        keywords: The keywords the digest was scored with.
+        matches: Output of scoring(): a list of [article, score, reasons].
+
+    Returns:
+        The new digest's id.
+
+    Raises:
+        sqlite3.IntegrityError: If a digest for digest_date already exists.
+    """
+    conn = connect(db_name)
+    try:
+        # `with conn` is one transaction: it commits if the block finishes and
+        # rolls back every insert if any of them fails, so no half-built digests.
+        with conn:
+            cur = conn.cursor()
+            cur.execute(
+                "INSERT INTO digests (digest_date, keywords, created_at) VALUES (?, ?, ?)",
+                (digest_date, keywords, utc_now_text()),
+            )
+            digest_id = cur.lastrowid
+            for rank, (article, score, reasons) in enumerate(matches, start=1):
+                cur.execute(
+                    """
+                    INSERT INTO digest_items
+                        (digest_id, rank, score, reasons,
+                         title, link, source, date, description)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    """,
+                    (
+                        digest_id,
+                        rank,
+                        score,
+                        reasons,
+                        article["title"],
+                        article["link"],
+                        article["source"],
+                        article.get("date"),
+                        article.get("description"),
+                    ),
+                )
+        return digest_id
+    finally:
+        conn.close()
+
+
+def get_digest(digest_date, db_name=DB_PATH):
+    """
+    Read the digest for a date, with its items in rank order.
+
+    Returns:
+        A dict of the digest's columns plus "items" (a list of item dicts),
+        or None if there's no digest for that date.
+    """
+    conn = connect(db_name)
+    conn.row_factory = sqlite3.Row
+    try:
+        digest = conn.execute(
+            "SELECT * FROM digests WHERE digest_date = ?", (digest_date,)
+        ).fetchone()
+        if digest is None:
+            return None
+        items = conn.execute(
+            "SELECT * FROM digest_items WHERE digest_id = ? ORDER BY rank",
+            (digest["id"],),
+        ).fetchall()
+        return {**dict(digest), "items": [dict(item) for item in items]}
+    finally:
+        conn.close()
