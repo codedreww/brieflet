@@ -342,3 +342,18 @@ def get_digest(digest_date, db_name=DB_PATH):
         return {**dict(digest), "items": [dict(item) for item in items]}
     finally:
         conn.close()
+
+
+def mark_delivered(digest_id, db_name=DB_PATH):
+    """
+    Record that a digest was delivered, so it's never sent again by accident.
+    """
+    conn = connect(db_name)
+    try:
+        conn.execute(
+            "UPDATE digests SET delivered_at = ? WHERE id = ?",
+            (utc_now_text(), digest_id),
+        )
+        conn.commit()
+    finally:
+        conn.close()

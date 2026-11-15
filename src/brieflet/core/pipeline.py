@@ -9,10 +9,12 @@ from brieflet.core.db import (
     finish_run,
     get_digest,
     get_setting,
+    mark_delivered,
     read_unsent_entries,
     save_to_db,
     start_run,
 )
+from brieflet.core.delivery.discord import build_discord_payload, send_discord_webhook
 from brieflet.core.scoring import scoring
 from brieflet.core.sources.arxiv import fetch_rss_feed, normalize_output, parse_rss_feed
 
@@ -102,3 +104,41 @@ def run_daily(db_name=DB_PATH, today=None, limit=DIGEST_SIZE):
         keywords,
     )
     return get_digest(digest_date, db_name=db_name)
+
+
+def deliver_digest(digest, webhook_url, db_name=DB_PATH, force=False):
+    """
+    Post a digest to Discord once, then record that it was delivered.
+
+    Args:
+        digest: A stored digest, as returned by get_digest().
+        webhook_url: The Discord webhook URL, or None if delivery isn't set up.
+        force: Send even if the digest was already delivered.
+
+    Returns:
+        True if the digest was sent, False if it was skipped.
+
+    Raises:
+        DeliveryError: If Discord couldn't be reached or rejected the message.
+            delivered_at stays empty, so the next run tries again.
+    """
+    if digest["delivered_at"] and not force:
+        logger.info(
+            "Digest for %s already delivered at %s; not sending again",
+            digest["digest_date"],
+            digest["delivered_at"],
+        )
+        return False
+    if not webhook_url:
+        logger.warning("DISCORD_WEBHOOK_URL is not set; skipping Discord delivery")
+        return False
+
+    send_discord_webhook(webhook_url, build_discord_payload(digest))
+    # Only after Discord accepted it: a failed send must stay "not delivered".
+    mark_delivered(digest["id"], db_name=db_name)
+    logger.info(
+        "Delivered digest for %s to Discord (%d items)",
+        digest["digest_date"],
+        len(digest["items"]),
+    )
+    return True
