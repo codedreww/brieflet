@@ -3,7 +3,7 @@ import logging
 import sys
 from datetime import date
 
-from brieflet.config import DB_PATH
+from brieflet.config import DB_PATH, get_discord_webhook_url
 from brieflet.core.db import (
     check_db,
     get_digest,
@@ -12,13 +12,14 @@ from brieflet.core.db import (
     read_recent_runs,
     set_setting,
 )
+from brieflet.core.delivery.discord import DeliveryError
 from brieflet.core.formatting import (
     create_markdown,
     format_digest_txt,
     format_output_md,
     format_output_txt,
 )
-from brieflet.core.pipeline import DEFAULT_KEYWORDS, collect, run_daily
+from brieflet.core.pipeline import DEFAULT_KEYWORDS, collect, deliver_digest, run_daily
 from brieflet.core.scoring import scoring
 
 logger = logging.getLogger(__name__)
@@ -33,6 +34,7 @@ def configure_logging():
         datefmt="%Y-%m-%d %H:%M:%S",
         stream=sys.stdout,
     )
+    logging.getLogger("httpx").setLevel(logging.WARNING)
 
 
 def search():
@@ -85,7 +87,7 @@ def prefs_set(keywords, db_name=DB_PATH):
     """
     cleaned = ", ".join(word.strip() for word in keywords.split(",") if word.strip())
     if not cleaned:
-        print("Error: give at least one keyword, e.g. brieflet prefs set \"AI, agents\"")
+        print('Error: give at least one keyword, e.g. brieflet prefs set "AI, agents"')
         return False
     check_db(db_name=db_name)
     set_setting("keywords", cleaned, db_name=db_name)
@@ -104,6 +106,31 @@ def show_digest(digest_date=None, db_name=DB_PATH):
         print(f"No digest for {digest_date}. Build one with: brieflet run-daily")
         return False
     print(format_digest_txt(digest))
+    return True
+
+
+def send_digest(digest_date=None, force=False, db_name=DB_PATH):
+    """
+    Send a stored digest (default: today's) to Discord. Returns False if it
+    couldn't be attempted; raises DeliveryError if Discord failed.
+    """
+    digest_date = digest_date or date.today().isoformat()
+    check_db(db_name=db_name)
+    digest = get_digest(digest_date, db_name=db_name)
+    if digest is None:
+        print(f"No digest for {digest_date}. Build one with: brieflet run-daily")
+        return False
+    webhook_url = get_discord_webhook_url()
+    if not webhook_url:
+        print("Error: DISCORD_WEBHOOK_URL is not set. Add it to .env (see README).")
+        return False
+    if deliver_digest(digest, webhook_url, db_name=db_name, force=force):
+        print(f"Sent the digest for {digest_date} to Discord.")
+    else:
+        print(
+            f"The digest for {digest_date} was already delivered at "
+            f"{digest['delivered_at']}. Use --force to send it again."
+        )
     return True
 
 
@@ -128,7 +155,8 @@ def build_parser():
     commands.add_parser("search", help="score stored papers against typed keywords")
     commands.add_parser("status", help="show recent collection runs")
     commands.add_parser(
-        "run-daily", help="collect, then build and store today's digest"
+        "run-daily",
+        help="collect, build and store today's digest, then send it to Discord",
     )
 
     prefs = commands.add_parser("prefs", help="show or change your keywords")
@@ -146,6 +174,18 @@ def build_parser():
         "--date",
         type=iso_date,
         help="which day's digest, as YYYY-MM-DD (default: today)",
+    )
+
+    send = commands.add_parser("send", help="send a stored digest to Discord")
+    send.add_argument(
+        "--date",
+        type=iso_date,
+        help="which day's digest, as YYYY-MM-DD (default: today)",
+    )
+    send.add_argument(
+        "--force",
+        action="store_true",
+        help="send even if this digest was already delivered",
     )
     return parser
 
@@ -171,6 +211,15 @@ def main(argv=None):
             logger.exception("Daily run failed")
             sys.exit(1)
         print(format_digest_txt(digest))
+        try:
+            deliver_digest(digest, get_discord_webhook_url())
+        except DeliveryError as e:
+            logger.error(
+                "Discord delivery failed: %s. The digest is saved; the next "
+                "run-daily (or brieflet send) will try again.",
+                e,
+            )
+            sys.exit(1)
     elif args.command == "prefs":
         if args.prefs_command == "show":
             prefs_show()
@@ -178,6 +227,14 @@ def main(argv=None):
             sys.exit(1)
     elif args.command == "digest" and not show_digest(args.date):
         sys.exit(1)
+    elif args.command == "send":
+        try:
+            sent_or_skipped = send_digest(args.date, force=args.force)
+        except DeliveryError as e:
+            logger.error("Discord delivery failed: %s", e)
+            sys.exit(1)
+        if not sent_or_skipped:
+            sys.exit(1)
 
 
 if __name__ == "__main__":
