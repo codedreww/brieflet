@@ -353,3 +353,24 @@ def test_mark_delivered_sets_delivered_at(db_path, monkeypatch):
     assert get_digest("2026-11-03", db_name=db_path)["delivered_at"] == (
         "2026-11-03T14:00:05Z"
     )
+
+
+def test_list_digests_newest_first_with_item_counts(db_path, stored_articles):
+    first, second, _ = stored_articles
+    create_digest("2026-11-02", "security", [[first, 7, "x"]], db_name=db_path)
+    create_digest("2026-11-03", "security", [[second, 5, "y"]], db_name=db_path)
+    create_digest("2026-11-01", "nothing", [], db_name=db_path)
+
+    digests = db.list_digests(db_name=db_path)
+
+    assert [d["digest_date"] for d in digests] == ["2026-11-03", "2026-11-02", "2026-11-01"]
+    assert [d["item_count"] for d in digests] == [1, 1, 0]
+    assert "items" not in digests[0]
+
+
+def test_list_digests_respects_limit(db_path):
+    check_db(db_name=db_path)
+    for day in range(1, 6):
+        create_digest(f"2026-11-0{day}", "x", [], db_name=db_path)
+
+    assert len(db.list_digests(limit=2, db_name=db_path)) == 2

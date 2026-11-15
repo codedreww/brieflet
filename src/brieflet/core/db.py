@@ -357,3 +357,29 @@ def mark_delivered(digest_id, db_name=DB_PATH):
         conn.commit()
     finally:
         conn.close()
+
+
+def list_digests(limit=60, db_name=DB_PATH):
+    """
+    List stored digests, newest first, each with its number of items.
+
+    Returns:
+        Dicts with the digest's columns plus "item_count" (no items themselves).
+    """
+    conn = connect(db_name)
+    conn.row_factory = sqlite3.Row
+    try:
+        rows = conn.execute(
+            """
+            SELECT digests.*, COUNT(digest_items.rank) AS item_count
+            FROM digests
+            LEFT JOIN digest_items ON digest_items.digest_id = digests.id
+            GROUP BY digests.id
+            ORDER BY digests.digest_date DESC
+            LIMIT ?
+            """,
+            (limit,),
+        ).fetchall()
+        return [dict(row) for row in rows]
+    finally:
+        conn.close()
