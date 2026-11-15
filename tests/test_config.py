@@ -48,3 +48,15 @@ def test_logging_hides_httpx_request_urls():
 
     assert logging.getLogger("httpx").getEffectiveLevel() == logging.WARNING
     assert not logging.getLogger("httpx").isEnabledFor(logging.INFO)
+
+
+def test_db_path_defaults_to_data_storage_db(monkeypatch):
+    monkeypatch.delenv("BRIEFLET_DB_PATH")
+
+    assert config.get_db_path() == config.PROJECT_ROOT / "data" / "storage.db"
+
+
+def test_db_path_can_be_overridden(monkeypatch, tmp_path):
+    monkeypatch.setenv("BRIEFLET_DB_PATH", str(tmp_path / "other.db"))
+
+    assert config.get_db_path() == tmp_path / "other.db"

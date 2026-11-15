@@ -3,7 +3,7 @@ import logging
 import sys
 from datetime import date
 
-from brieflet.config import DB_PATH, get_discord_webhook_url
+from brieflet.config import DB_PATH, get_db_path, get_discord_webhook_url
 from brieflet.core.db import (
     check_db,
     get_digest,
@@ -37,10 +37,10 @@ def configure_logging():
     logging.getLogger("httpx").setLevel(logging.WARNING)
 
 
-def search():
+def search(db_name=DB_PATH):
     print("Please input keywords divided by commas (,)")
     keywords = input()
-    data = read_from_db()
+    data = read_from_db(db_name=db_name)
     result = scoring(keywords, data)
     md_res = format_output_md(keywords, result)
     saved_path = create_markdown(md_res)
@@ -193,26 +193,27 @@ def build_parser():
 def main(argv=None):
     configure_logging()
     args = build_parser().parse_args(argv)
+    db = get_db_path()
 
     if args.command == "collect":
         try:
-            collect()
+            collect(db_name=db)
         except Exception:
             logger.exception("Collect failed")
             sys.exit(1)
     elif args.command == "search":
-        search()
+        search(db_name=db)
     elif args.command == "status":
-        status()
+        status(db_name=db)
     elif args.command == "run-daily":
         try:
-            digest = run_daily()
+            digest = run_daily(db_name=db)
         except Exception:
             logger.exception("Daily run failed")
             sys.exit(1)
         print(format_digest_txt(digest))
         try:
-            deliver_digest(digest, get_discord_webhook_url())
+            deliver_digest(digest, get_discord_webhook_url(), db_name=db)
         except DeliveryError as e:
             logger.error(
                 "Discord delivery failed: %s. The digest is saved; the next "
@@ -222,14 +223,14 @@ def main(argv=None):
             sys.exit(1)
     elif args.command == "prefs":
         if args.prefs_command == "show":
-            prefs_show()
-        elif not prefs_set(args.keywords):
+            prefs_show(db_name=db)
+        elif not prefs_set(args.keywords, db_name=db):
             sys.exit(1)
-    elif args.command == "digest" and not show_digest(args.date):
+    elif args.command == "digest" and not show_digest(args.date, db_name=db):
         sys.exit(1)
     elif args.command == "send":
         try:
-            sent_or_skipped = send_digest(args.date, force=args.force)
+            sent_or_skipped = send_digest(args.date, force=args.force, db_name=db)
         except DeliveryError as e:
             logger.error("Discord delivery failed: %s", e)
             sys.exit(1)

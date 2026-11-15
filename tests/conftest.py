@@ -33,6 +33,15 @@ def db_path(tmp_path):
     return tmp_path / "test_storage.db"
 
 
+@pytest.fixture(autouse=True)
+def isolated_db(monkeypatch, db_path):
+    """
+    Point get_db_path() (used by cli.main and the Streamlit pages) at this
+    test's temporary database, so no test can open data/storage.db.
+    """
+    monkeypatch.setenv("BRIEFLET_DB_PATH", str(db_path))
+
+
 @pytest.fixture
 def saved_entry():
     return {
