@@ -67,19 +67,20 @@ Every command has its own help, for example `brieflet --help`, `brieflet prefs -
 
 ## Run Streamlit
 
-Before opening the interface for the first time, collect papers:
-
-```sh
-brieflet collect
-```
-
-Then start Streamlit:
+Start the web app from the repository root:
 
 ```sh
 streamlit run src/brieflet/app.py
 ```
 
-The Streamlit app still scores papers live against the keywords you pick on the page. Reading stored digests and saved keywords there is planned (Phase 1 of the ADR).
+It reads the same database as the CLI, so it always shows the same digests that went to Discord. It has four pages:
+
+| Page | What it shows |
+| --- | --- |
+| **Today** | Today's digest: each paper's score, why it matched, its abstract, and links to the article and PDF. If today's digest isn't built yet, a button builds it; if it hasn't reached Discord, a button sends it. |
+| **History** | Every past digest, newest first, with how many papers it had and whether it was sent. |
+| **Preferences** | Your saved keywords. Pick suggestions or type your own, then save; the next digest uses them. |
+| **Explore** | Try any keywords against every paper collected this week, without changing your preferences or digests. |
 
 ## Scheduled daily digest (macOS)
 
@@ -153,4 +154,6 @@ pytest
 ruff check src tests
 ```
 
-Tests never touch `data/storage.db` or the network: each one uses a temporary database, and any real HTTP request fails the test. Code in `src/brieflet/core/` must not import `cli.py` or `app.py`; `tests/test_architecture.py` enforces this.
+Tests never touch `data/storage.db` or the network: each one uses a temporary database, and any real HTTP request fails the test. The Streamlit pages are tested too, by running them with Streamlit's `AppTest`. Code in `src/brieflet/core/` must not import `cli.py`, `app.py` or `ui.py`; `tests/test_architecture.py` enforces this.
+
+To point the CLI or the app at a different database file, set `BRIEFLET_DB_PATH` (the tests use this to work on a temporary copy).

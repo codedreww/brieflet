@@ -272,10 +272,10 @@ None of the projects found combine all three.
 
 Decided 2026-11-03: Phase 1 stays local, on SQLite and launchd. GitHub Actions and Streamlit Cloud both have ephemeral disks, so they only work once a hosted database exists. All three cloud pieces move together at the start of Phase 2. This gets the first Discord briefing working sooner, and introduces one new concept at a time.
 
-5. [ ] Saved keyword preferences, plus `digests` + `digest_items` tables. `brieflet run-daily` = collect → score (keywords, excluding items already sent) → store the digest.
-6. [ ] Discord webhook delivery (one embed per item: title, why, score, link). The webhook URL lives in `.env`, never in git.
-7. [ ] Point launchd at `brieflet run-daily` instead of `collect`.
-8. [ ] Streamlit "Today", "History" and "Preferences" pages read stored digests and saved keywords instead of scoring live.
+5. [x] Saved keyword preferences, plus `digests` + `digest_items` tables. `brieflet run-daily` = collect → score (keywords, excluding items already sent) → store the digest.
+6. [x] Discord webhook delivery (one embed per item: title, why, score, link). The webhook URL lives in `.env`, never in git.
+7. [x] Point launchd at `brieflet run-daily` instead of `collect`.
+8. [x] Streamlit "Today", "History" and "Preferences" pages read stored digests and saved keywords instead of scoring live.
 
 **Phase 2 — Move to the cloud, then natural-language preferences and semantic ranking**
 9. [ ] Move to the cloud together: hosted Postgres (Supabase/Neon) behind the repository layer, a GitHub Actions cron for `run-daily` with secrets, and Streamlit Community Cloud. Retire launchd.

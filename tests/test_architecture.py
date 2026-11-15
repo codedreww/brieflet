@@ -1,7 +1,7 @@
 """
 Guards the dependency direction from the ADR:
 
-    cli.py / app.py  ->  core/  ->  config.py
+    cli.py / app.py / ui.py / app_pages/  ->  core/  ->  config.py
 
 core/ must never import the entry points. If it does, the bot, MCP server and
 Streamlit can't reuse core/ on their own, and cli <-> core imports go circular.
@@ -13,7 +13,7 @@ from pathlib import Path
 import pytest
 
 CORE_DIR = Path(__file__).parent.parent / "src" / "brieflet" / "core"
-ENTRY_POINTS = {"brieflet.cli", "brieflet.app"}
+ENTRY_POINTS = {"brieflet.cli", "brieflet.app", "brieflet.ui"}
 
 
 def imported_modules(path):
