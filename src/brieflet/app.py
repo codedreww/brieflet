@@ -1,73 +1,21 @@
-# v1.0
-# Frontend using streamlit and input keywords.
+# Streamlit entry point: `streamlit run src/brieflet/app.py`.
+# This file only sets up navigation; each page lives in app_pages/.
 
 import streamlit as st
 
-from brieflet.core.db import read_from_db
-from brieflet.core.formatting import convert_date
-from brieflet.core.scoring import scoring
+st.set_page_config(page_title="Brieflet", page_icon=":material/newspaper:")
 
-st.header("Welcome to Brieflet!📚📖")
-st.write(
-    "Add your keywords below and we'll find the best recent articles from Arxiv for you to read!"
+page = st.navigation(
+    [
+        st.Page(
+            "app_pages/today.py", title="Today", icon=":material/today:", default=True
+        ),
+        st.Page("app_pages/history.py", title="History", icon=":material/history:"),
+        st.Page(
+            "app_pages/preferences.py", title="Preferences", icon=":material/tune:"
+        ),
+        st.Page("app_pages/explore.py", title="Explore", icon=":material/search:"),
+    ],
+    position="top",
 )
-
-with st.container(border=True):
-    keywords = st.multiselect(
-        "Choose or add your interests",
-        options=["AI", "Security", "Robotics", "Machine Learning", "LLM", "Benchmark"],
-        default=["AI", "Security"],
-        accept_new_options=True,
-    )
-
-st.write("Relevant articles based on keywords:")
-
-
-def get_results(selected_keywords):
-    keyword_text = ", ".join(selected_keywords)
-    data = read_from_db()
-    return scoring(keyword_text, data)
-
-
-def format_output(results):
-    if not results:
-        st.write("No matching articles found.")
-        return
-
-    for number, entry in enumerate(results, start=1):
-        article = entry[0]["title"]
-        source = entry[0]["source"]
-        score = entry[1] or "0"
-        reason = entry[2]
-        description = entry[0].get("description") or "Description unavailable"
-        link = entry[0]["link"]
-
-        with st.container(border=True):
-            stored_date = entry[0].get("date")
-            display_date = convert_date(stored_date)
-
-            st.subheader(f"{number}) {article}")
-            col1, col2 = st.columns(2)
-            with col1:
-                st.write(f"date published: {display_date}")
-            with col2:
-                st.caption(f"{source} · Match score: {score}")
-            st.write(f"**Why it matched:** {reason}")
-
-            with st.expander("Read abstract"):
-                st.write(description)
-
-            col3, col4 = st.columns(2)
-            with col3:
-                st.link_button("Open article", link)
-
-            pdf_url = link.replace("/abs/", "/pdf/", 1)
-            with col4:
-                st.link_button("Open PDF in browser", pdf_url)
-
-            if st.toggle("Preview PDF", key=f"preview-{link}"):
-                st.pdf(pdf_url, height=650, key=f"pdf-{link}")
-
-
-results = get_results(keywords)
-format_output(results)
+page.run()
