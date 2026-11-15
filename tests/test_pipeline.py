@@ -12,6 +12,7 @@ from brieflet.core.db import (
     save_to_db,
     set_setting,
 )
+from brieflet.core.delivery.discord import DeliveryError
 from brieflet.core.sources.arxiv import FetchError
 
 FIXTURE_FEED = Path(__file__).parent / "fixtures" / "arxiv_cs_ai.xml"
@@ -122,3 +123,91 @@ def test_failed_collect_still_builds_digest_from_stored_entries(
     assert links(digest) == {stored["link"]}
     (run,) = read_recent_runs(db_name=db_path)
     assert run["status"] == "failed"
+
+
+# --- Delivery ------------------------------------------------------------------------
+
+FAKE_URL = "https://discord.com/api/webhooks/123/fake-token"
+
+
+@pytest.fixture
+def sent(monkeypatch):
+    """Fake Discord: records each (url, payload) instead of posting it."""
+    calls = []
+    monkeypatch.setattr(
+        pipeline, "send_discord_webhook", lambda url, payload: calls.append((url, payload))
+    )
+    return calls
+
+
+@pytest.fixture
+def todays_digest(db_path, feed_from_fixture):
+    return pipeline.run_daily(db_name=db_path, today=DAY_1)
+
+
+def test_deliver_sends_then_marks_delivered(db_path, todays_digest, sent):
+    assert pipeline.deliver_digest(todays_digest, FAKE_URL, db_name=db_path) is True
+
+    ((url, payload),) = sent
+    assert url == FAKE_URL
+    assert len(payload["embeds"]) == len(todays_digest["items"])
+    assert get_digest("2026-11-03", db_name=db_path)["delivered_at"] is not None
+
+
+def test_deliver_skips_an_already_delivered_digest(db_path, todays_digest, sent):
+    pipeline.deliver_digest(todays_digest, FAKE_URL, db_name=db_path)
+    delivered = get_digest("2026-11-03", db_name=db_path)
+
+    assert pipeline.deliver_digest(delivered, FAKE_URL, db_name=db_path) is False
+    assert len(sent) == 1
+
+
+def test_force_resends_a_delivered_digest(db_path, todays_digest, sent):
+    pipeline.deliver_digest(todays_digest, FAKE_URL, db_name=db_path)
+    delivered = get_digest("2026-11-03", db_name=db_path)
+
+    assert pipeline.deliver_digest(delivered, FAKE_URL, db_name=db_path, force=True)
+    assert len(sent) == 2
+
+
+def test_deliver_without_webhook_skips_with_a_warning(
+    db_path, todays_digest, sent, caplog
+):
+    assert pipeline.deliver_digest(todays_digest, None, db_name=db_path) is False
+
+    assert sent == []
+    assert "DISCORD_WEBHOOK_URL is not set" in caplog.text
+    assert get_digest("2026-11-03", db_name=db_path)["delivered_at"] is None
+
+
+def test_failed_delivery_leaves_digest_undelivered(db_path, todays_digest, monkeypatch):
+    def discord_down(url, payload):
+        raise DeliveryError("Discord returned HTTP 503")
+
+    monkeypatch.setattr(pipeline, "send_discord_webhook", discord_down)
+
+    with pytest.raises(DeliveryError):
+        pipeline.deliver_digest(todays_digest, FAKE_URL, db_name=db_path)
+
+    assert get_digest("2026-11-03", db_name=db_path)["delivered_at"] is None
+
+
+def test_next_run_retries_a_failed_delivery(db_path, feed_from_fixture, monkeypatch):
+    # 08:00: Discord is down. The digest is built but not delivered.
+    def discord_down(url, payload):
+        raise DeliveryError("Discord returned HTTP 503")
+
+    monkeypatch.setattr(pipeline, "send_discord_webhook", discord_down)
+    digest = pipeline.run_daily(db_name=db_path, today=DAY_1)
+    with pytest.raises(DeliveryError):
+        pipeline.deliver_digest(digest, FAKE_URL, db_name=db_path)
+
+    # Later run, same day: Discord is back. The same digest goes out once.
+    sent = []
+    monkeypatch.setattr(
+        pipeline, "send_discord_webhook", lambda url, payload: sent.append(payload)
+    )
+    again = pipeline.run_daily(db_name=db_path, today=DAY_1)
+    assert again["id"] == digest["id"]
+    assert pipeline.deliver_digest(again, FAKE_URL, db_name=db_path) is True
+    assert len(sent) == 1

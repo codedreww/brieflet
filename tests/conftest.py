@@ -18,6 +18,16 @@ def block_network(monkeypatch):
     monkeypatch.setattr(httpx.Client, "send", blocked)
 
 
+@pytest.fixture(autouse=True)
+def no_real_webhook(monkeypatch):
+    """
+    Hide the real DISCORD_WEBHOOK_URL that config.py loads from .env.
+
+    Tests that need a webhook set a fake one with monkeypatch.setenv.
+    """
+    monkeypatch.delenv("DISCORD_WEBHOOK_URL", raising=False)
+
+
 @pytest.fixture
 def db_path(tmp_path):
     return tmp_path / "test_storage.db"

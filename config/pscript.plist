@@ -8,7 +8,7 @@
     <key>ProgramArguments</key>
     <array>
         <string>/Users/andrewtan/Coding/pscript/.venv/bin/brieflet</string>
-        <string>collect</string>
+        <string>run-daily</string>
     </array>
 
     <key>WorkingDirectory</key>

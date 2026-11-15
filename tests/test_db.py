@@ -341,3 +341,15 @@ def test_read_unsent_entries_skips_entries_already_in_a_digest(
 
     unsent_links = {entry["link"] for entry in read_unsent_entries(db_name=db_path)}
     assert unsent_links == {second["link"], third["link"]}
+
+
+def test_mark_delivered_sets_delivered_at(db_path, monkeypatch):
+    check_db(db_name=db_path)
+    digest_id = create_digest("2026-11-03", "security", [], db_name=db_path)
+    monkeypatch.setattr(db, "utc_now_text", lambda: "2026-11-03T14:00:05Z")
+
+    db.mark_delivered(digest_id, db_name=db_path)
+
+    assert get_digest("2026-11-03", db_name=db_path)["delivered_at"] == (
+        "2026-11-03T14:00:05Z"
+    )

@@ -5,6 +5,7 @@ import pytest
 from brieflet import cli
 from brieflet.core import pipeline
 from brieflet.core.db import check_db, create_digest, get_setting
+from brieflet.core.delivery.discord import DeliveryError
 from brieflet.core.formatting import format_digest_txt
 
 # --- prefs ---------------------------------------------------------------------
@@ -171,5 +172,121 @@ def test_main_prefs_set_with_only_commas_exits_1(monkeypatch):
 
     with pytest.raises(SystemExit) as excinfo:
         cli.main(["prefs", "set", " , "])
+
+    assert excinfo.value.code == 1
+
+
+# --- Discord delivery from the CLI ---------------------------------------------------
+
+FAKE_URL = "https://discord.com/api/webhooks/123/fake-token"
+
+
+@pytest.fixture
+def sent(monkeypatch):
+    """Fake Discord at the network layer, so the real deliver_digest runs."""
+    payloads = []
+    monkeypatch.setattr(
+        pipeline, "send_discord_webhook", lambda url, payload: payloads.append(payload)
+    )
+    return payloads
+
+
+@pytest.fixture
+def webhook_configured(monkeypatch):
+    monkeypatch.setenv("DISCORD_WEBHOOK_URL", FAKE_URL)
+
+
+def test_send_digest_sends_and_reports(
+    db_path, stored_digest, sent, webhook_configured, capsys
+):
+    assert cli.send_digest("2026-11-03", db_name=db_path) is True
+
+    assert len(sent) == 1
+    assert "Sent the digest for 2026-11-03" in capsys.readouterr().out
+
+
+def test_send_digest_twice_only_sends_once(
+    db_path, stored_digest, sent, webhook_configured, capsys
+):
+    cli.send_digest("2026-11-03", db_name=db_path)
+    cli.send_digest("2026-11-03", db_name=db_path)
+
+    assert len(sent) == 1
+    assert "already delivered" in capsys.readouterr().out
+
+
+def test_send_digest_force_sends_again(db_path, stored_digest, sent, webhook_configured):
+    cli.send_digest("2026-11-03", db_name=db_path)
+    cli.send_digest("2026-11-03", force=True, db_name=db_path)
+
+    assert len(sent) == 2
+
+
+def test_send_digest_without_webhook_is_an_error(db_path, stored_digest, sent, capsys):
+    assert cli.send_digest("2026-11-03", db_name=db_path) is False
+
+    assert sent == []
+    assert "DISCORD_WEBHOOK_URL is not set" in capsys.readouterr().out
+
+
+def test_send_digest_missing_date(db_path, sent, webhook_configured, capsys):
+    assert cli.send_digest("2020-01-01", db_name=db_path) is False
+
+    assert "No digest for 2020-01-01" in capsys.readouterr().out
+
+
+def test_parser_reads_send_options():
+    args = cli.build_parser().parse_args(["send", "--date", "2026-11-03", "--force"])
+
+    assert (args.command, args.date, args.force) == ("send", "2026-11-03", True)
+    assert cli.build_parser().parse_args(["send"]).force is False
+
+
+# main() wiring: handlers would open the real database, so they're replaced.
+
+
+@pytest.fixture
+def delivered(monkeypatch):
+    calls = []
+    monkeypatch.setattr(
+        cli, "deliver_digest", lambda digest, url: calls.append((digest, url))
+    )
+    return calls
+
+
+def test_main_run_daily_delivers_with_the_configured_webhook(
+    fake_run_daily, delivered, webhook_configured
+):
+    cli.main(["run-daily"])
+
+    ((digest, url),) = delivered
+    assert url == FAKE_URL
+    assert digest["keywords"] == "AI"
+
+
+def test_main_run_daily_exits_1_when_delivery_fails(
+    fake_run_daily, monkeypatch, caplog, capsys
+):
+    def discord_down(digest, url):
+        raise DeliveryError("Discord returned HTTP 503")
+
+    monkeypatch.setattr(cli, "deliver_digest", discord_down)
+
+    with pytest.raises(SystemExit) as excinfo:
+        cli.main(["run-daily"])
+
+    assert excinfo.value.code == 1
+    assert "No matching articles found." in capsys.readouterr().out  # still printed
+    assert "next run-daily" in caplog.text
+
+
+def test_main_send_exits_1_when_delivery_fails(monkeypatch):
+    def discord_down(digest_date, force):
+        raise DeliveryError("Discord returned HTTP 503")
+
+    monkeypatch.setattr(cli, "send_digest", discord_down)
+
+    with pytest.raises(SystemExit) as excinfo:
+        cli.main(["send"])
 
     assert excinfo.value.code == 1
